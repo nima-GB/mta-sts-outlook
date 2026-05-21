@@ -1,45 +1,563 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <style>
-        :root { --neon: #00FF41; --bg: #000500; }
-        body { background: var(--bg); color: var(--neon); font-family: 'Courier New', monospace; margin: 0; overflow: hidden; display: flex; justify-content: center; align-items: center; height: 100vh; }
-        
-        .scan-line { position: absolute; width: 100%; height: 2px; background: rgba(0, 255, 65, 0.1); animation: scan 4s linear infinite; }
-        @keyframes scan { from { top: 0; } to { top: 100%; } }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-        .dashboard { width: 80%; max-width: 800px; padding: 40px; border: 1px solid var(--neon); background: linear-gradient(180deg, #001100 0%, #000 100%); position: relative; box-shadow: 0 0 30px rgba(0, 255, 65, 0.2); }
-        
-        .telemetry-row { display: flex; justify-content: space-between; border-bottom: 1px solid #003300; padding: 10px 0; }
-        
-        .pulse-box { height: 100px; display: flex; align-items: center; justify-content: center; gap: 5px; }
-        .bar { width: 4px; background: var(--neon); animation: pulse 1s infinite alternate; }
-        .bar:nth-child(1) { height: 20%; animation-delay: 0.1s; }
-        .bar:nth-child(2) { height: 50%; animation-delay: 0.2s; }
-        .bar:nth-child(3) { height: 80%; animation-delay: 0.3s; }
-        .bar:nth-child(4) { height: 40%; animation-delay: 0.4s; }
-        @keyframes pulse { to { transform: scaleY(2); } }
+<title>SERAPH // Cognitive Defence Grid</title>
 
-        .data-stream { font-size: 0.7em; opacity: 0.6; margin-top: 20px; white-space: pre; }
-    </style>
+<style>
+
+:root{
+    --neon:#00ff88;
+    --neon-soft:#00ff8844;
+    --bg:#020403;
+    --panel:#08110c;
+    --danger:#ff004c;
+    --text:#b7ffd7;
+}
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+body{
+    overflow:hidden;
+    background:radial-gradient(circle at center,#071109 0%,#010201 70%);
+    color:var(--text);
+    font-family:Consolas, monospace;
+    height:100vh;
+}
+
+/* =========================================
+BACKGROUND NOISE
+========================================= */
+
+.noise{
+    position:fixed;
+    inset:0;
+    opacity:.06;
+    pointer-events:none;
+    background-image:
+    repeating-radial-gradient(circle at 50% 50%,
+    rgba(255,255,255,.08) 0px,
+    transparent 1px,
+    transparent 4px);
+    animation:noiseMove .25s infinite;
+}
+
+@keyframes noiseMove{
+    0%{transform:translate(0,0)}
+    25%{transform:translate(-1px,1px)}
+    50%{transform:translate(1px,-1px)}
+    75%{transform:translate(2px,1px)}
+    100%{transform:translate(0,0)}
+}
+
+/* =========================================
+SCANLINES
+========================================= */
+
+.scanlines{
+    position:fixed;
+    inset:0;
+    background:
+    repeating-linear-gradient(
+        to bottom,
+        transparent 0px,
+        rgba(0,255,120,.03) 1px,
+        transparent 3px
+    );
+    pointer-events:none;
+}
+
+.scanbeam{
+    position:absolute;
+    width:100%;
+    height:120px;
+    background:linear-gradient(
+        to bottom,
+        transparent,
+        rgba(0,255,136,.08),
+        transparent
+    );
+    animation:scan 5s linear infinite;
+}
+
+@keyframes scan{
+    from{transform:translateY(-200px)}
+    to{transform:translateY(120vh)}
+}
+
+/* =========================================
+MAIN CONTAINER
+========================================= */
+
+.container{
+    position:relative;
+    z-index:5;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    height:100vh;
+    padding:40px;
+}
+
+/* =========================================
+MAIN HUD
+========================================= */
+
+.hud{
+    width:1200px;
+    max-width:95%;
+    height:720px;
+
+    border:1px solid var(--neon-soft);
+
+    background:
+    linear-gradient(
+        180deg,
+        rgba(0,255,100,.05),
+        rgba(0,0,0,.85)
+    );
+
+    backdrop-filter:blur(6px);
+
+    box-shadow:
+    0 0 40px rgba(0,255,136,.12),
+    inset 0 0 80px rgba(0,255,136,.03);
+
+    position:relative;
+    overflow:hidden;
+}
+
+/* =========================================
+GRID
+========================================= */
+
+.grid{
+    position:absolute;
+    inset:0;
+
+    background-image:
+        linear-gradient(rgba(0,255,136,.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,255,136,.05) 1px, transparent 1px);
+
+    background-size:40px 40px;
+}
+
+/* =========================================
+HEADER
+========================================= */
+
+.header{
+    padding:28px 40px;
+    border-bottom:1px solid rgba(0,255,136,.1);
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+
+.logo{
+    font-size:32px;
+    letter-spacing:10px;
+    color:var(--neon);
+    position:relative;
+    animation:glitch 2s infinite;
+}
+
+.logo::before,
+.logo::after{
+    content:attr(data-text);
+    position:absolute;
+    top:0;
+    left:0;
+    opacity:.5;
+}
+
+.logo::before{
+    color:#ff004c;
+    transform:translate(-2px,0);
+}
+
+.logo::after{
+    color:#00ccff;
+    transform:translate(2px,0);
+}
+
+@keyframes glitch{
+    0%,100%{transform:none}
+    20%{transform:skewX(2deg)}
+    40%{transform:translateX(1px)}
+    60%{transform:translateX(-1px)}
+    80%{transform:skewX(-2deg)}
+}
+
+.status{
+    color:var(--danger);
+    font-size:12px;
+    letter-spacing:4px;
+}
+
+/* =========================================
+CENTER CORE
+========================================= */
+
+.core-wrapper{
+    position:absolute;
+    inset:0;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+}
+
+.core{
+    width:260px;
+    height:260px;
+    border-radius:50%;
+    border:1px solid rgba(0,255,136,.3);
+    position:relative;
+
+    box-shadow:
+    0 0 60px rgba(0,255,136,.15),
+    inset 0 0 40px rgba(0,255,136,.15);
+
+    animation:rotate 20s linear infinite;
+}
+
+.core::before{
+    content:"";
+    position:absolute;
+    inset:30px;
+    border-radius:50%;
+    border:1px solid rgba(0,255,136,.2);
+}
+
+.core::after{
+    content:"";
+    position:absolute;
+    inset:80px;
+    border-radius:50%;
+    background:radial-gradient(circle,var(--neon),transparent);
+    filter:blur(8px);
+    animation:pulse 2s infinite;
+}
+
+@keyframes rotate{
+    from{transform:rotate(0deg)}
+    to{transform:rotate(360deg)}
+}
+
+@keyframes pulse{
+    0%,100%{
+        transform:scale(.9);
+        opacity:.5;
+    }
+    50%{
+        transform:scale(1.2);
+        opacity:1;
+    }
+}
+
+/* =========================================
+PANELS
+========================================= */
+
+.panel{
+    position:absolute;
+    width:320px;
+    padding:20px;
+    border:1px solid rgba(0,255,136,.1);
+    background:rgba(0,10,5,.55);
+}
+
+.left{
+    top:120px;
+    left:30px;
+}
+
+.right{
+    top:120px;
+    right:30px;
+}
+
+.bottom{
+    bottom:30px;
+    left:30px;
+    width:calc(100% - 60px);
+    height:180px;
+}
+
+.panel-title{
+    color:var(--neon);
+    margin-bottom:20px;
+    letter-spacing:4px;
+    font-size:13px;
+}
+
+/* =========================================
+METRICS
+========================================= */
+
+.metric{
+    display:flex;
+    justify-content:space-between;
+    margin-bottom:14px;
+    font-size:13px;
+    border-bottom:1px solid rgba(0,255,136,.08);
+    padding-bottom:6px;
+}
+
+.metric span:last-child{
+    color:var(--neon);
+}
+
+/* =========================================
+TERMINAL
+========================================= */
+
+.terminal{
+    height:110px;
+    overflow:hidden;
+    color:#87ffb8;
+    font-size:12px;
+    line-height:1.7;
+}
+
+.cursor{
+    display:inline-block;
+    width:10px;
+    background:var(--neon);
+    animation:blink 1s infinite;
+}
+
+@keyframes blink{
+    50%{opacity:0}
+}
+
+/* =========================================
+ENTROPY BARS
+========================================= */
+
+.bars{
+    display:flex;
+    align-items:flex-end;
+    gap:6px;
+    height:90px;
+    margin-top:20px;
+}
+
+.bar{
+    width:10px;
+    background:var(--neon);
+    box-shadow:0 0 12px var(--neon);
+    animation:entropy 1s infinite alternate;
+}
+
+.bar:nth-child(1){height:20%;animation-delay:.1s}
+.bar:nth-child(2){height:60%;animation-delay:.3s}
+.bar:nth-child(3){height:40%;animation-delay:.5s}
+.bar:nth-child(4){height:80%;animation-delay:.2s}
+.bar:nth-child(5){height:50%;animation-delay:.6s}
+.bar:nth-child(6){height:95%;animation-delay:.4s}
+
+@keyframes entropy{
+    to{
+        transform:scaleY(1.8);
+        opacity:.6;
+    }
+}
+
+/* =========================================
+FOOTER TEXT
+========================================= */
+
+.footer{
+    position:absolute;
+    bottom:8px;
+    right:15px;
+    font-size:10px;
+    opacity:.5;
+    letter-spacing:3px;
+}
+
+</style>
 </head>
+
 <body>
-    <div class="scan-line"></div>
-    <div class="dashboard">
-        <h2 style="text-align: center; letter-spacing: 10px;">TACTICAL_DATA_LINK</h2>
-        <div class="pulse-box">
-            <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
+
+<div class="noise"></div>
+<div class="scanlines"></div>
+<div class="scanbeam"></div>
+
+<div class="container">
+
+    <div class="hud">
+
+        <div class="grid"></div>
+
+        <div class="header">
+            <div class="logo" data-text="SERAPH_AI">
+                SERAPH_AI
+            </div>
+
+            <div class="status">
+                SIGNAL INTELLIGENCE ACTIVE
+            </div>
         </div>
-        <div class="telemetry-row"><span>PROTOCOL: MTA-STS</span><span>STATUS: ENFORCED</span></div>
-        <div class="telemetry-row"><span>CRYPTOGRAPHY: DMARC</span><span>STATUS: REJECT</span></div>
-        <div class="telemetry-row"><span>PERIMETER: TLS-RPT</span><span>STATUS: ARMED</span></div>
-        <div class="data-stream">
-ROOT_ACCESS: GRANTED
-ENCRYPTION_LAYER: 256-BIT_AES
-THREAT_SURFACE: MINIMIZED
-SECURITY_INDEX: 99.99%_IRONCLAD
+
+        <!-- LEFT PANEL -->
+
+        <div class="panel left">
+
+            <div class="panel-title">
+                THREAT MATRIX
+            </div>
+
+            <div class="metric">
+                <span>Entropy Field</span>
+                <span>97.44%</span>
+            </div>
+
+            <div class="metric">
+                <span>Neural Drift</span>
+                <span>STABLE</span>
+            </div>
+
+            <div class="metric">
+                <span>Quantum Tunnel</span>
+                <span>CONNECTED</span>
+            </div>
+
+            <div class="metric">
+                <span>SIGINT Mesh</span>
+                <span>LIVE</span>
+            </div>
+
+            <div class="metric">
+                <span>Zero Trust</span>
+                <span>ENFORCED</span>
+            </div>
+
+            <div class="bars">
+                <div class="bar"></div>
+                <div class="bar"></div>
+                <div class="bar"></div>
+                <div class="bar"></div>
+                <div class="bar"></div>
+                <div class="bar"></div>
+            </div>
+
         </div>
+
+        <!-- RIGHT PANEL -->
+
+        <div class="panel right">
+
+            <div class="panel-title">
+                CRYPTO ENGINE
+            </div>
+
+            <div class="metric">
+                <span>AES-256</span>
+                <span>LOCKED</span>
+            </div>
+
+            <div class="metric">
+                <span>ChaCha20</span>
+                <span>ACTIVE</span>
+            </div>
+
+            <div class="metric">
+                <span>Forward Secrecy</span>
+                <span>VALID</span>
+            </div>
+
+            <div class="metric">
+                <span>AI Cipher Loop</span>
+                <span>SELF-EVOLVING</span>
+            </div>
+
+            <div class="metric">
+                <span>Seraph Tumbler</span>
+                <span>OBFUSCATED</span>
+            </div>
+
+        </div>
+
+        <!-- CORE -->
+
+        <div class="core-wrapper">
+            <div class="core"></div>
+        </div>
+
+        <!-- TERMINAL -->
+
+        <div class="panel bottom">
+
+            <div class="panel-title">
+                LIVE TELEMETRY
+            </div>
+
+            <div class="terminal" id="terminal"></div>
+
+        </div>
+
+        <div class="footer">
+            COGNITIVE WARFARE NETWORK // AI DEFENCE GRID
+        </div>
+
     </div>
+
+</div>
+
+<script>
+
+const terminal = document.getElementById('terminal');
+
+const lines = [
+
+"[SYS] Establishing encrypted SIGINT uplink...",
+"[AI] Neural lattice synchronised.",
+"[CORE] Entropy injection stabilised.",
+"[SEC] Adaptive countermeasure engine online.",
+"[NET] Dark relay mesh active.",
+"[AUTH] Quantum handshake validated.",
+"[SERAPH] Autonomous cognition thread initiated.",
+"[SCAN] Monitoring hostile surface vectors.",
+"[TRACE] Multi-spectrum telemetry streaming.",
+"[AI] Predictive threat engine learning."
+
+];
+
+let index = 0;
+
+function addLine(){
+
+    const div = document.createElement('div');
+    div.innerHTML = lines[index] + ' <span class="cursor"></span>';
+
+    terminal.appendChild(div);
+
+    terminal.scrollTop = terminal.scrollHeight;
+
+    index++;
+
+    if(index >= lines.length){
+        index = 0;
+    }
+
+    if(terminal.children.length > 8){
+        terminal.removeChild(terminal.firstChild);
+    }
+
+}
+
+setInterval(addLine, 1200);
+
+</script>
+
 </body>
 </html>
