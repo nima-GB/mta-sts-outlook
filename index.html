@@ -2,43 +2,25 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SECURE.DNS.OPERATIONS</title>
     <style>
-        body {
-            background-color: #000000;
-            color: #00FF41;
-            font-family: 'Courier New', monospace;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            text-shadow: 0 0 8px #00FF41;
-        }
-        .matrix-box {
-            border: 2px solid #00FF41;
-            padding: 40px;
-            width: 80%;
-            max-width: 600px;
-            background: rgba(0, 20, 0, 0.9);
-        }
-        h1 { border-bottom: 1px solid #00FF41; padding-bottom: 10px; }
-        .status-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 30px; }
-        .secure { color: #00FF41; font-weight: bold; }
+        body { background: #000; color: #00FF41; font-family: 'Courier New', monospace; margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
+        .grid { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image: linear-gradient(#001100 1px, transparent 1px), linear-gradient(90deg, #001100 1px, transparent 1px); background-size: 40px 40px; }
+        .core { z-index: 10; text-align: center; border: 1px solid #00FF41; padding: 50px; background: rgba(0,0,0,0.8); box-shadow: 0 0 20px #00FF41; }
+        
+        /* The Heartbeat Animation */
+        .pulse-line { stroke: #00FF41; stroke-width: 2; fill: none; stroke-dasharray: 1000; stroke-dashoffset: 1000; animation: dash 2s linear infinite; }
+        @keyframes dash { to { stroke-dashoffset: 0; } }
     </style>
 </head>
 <body>
-    <div class="matrix-box">
-        <h1>[ SYSTEM_SECURE ]</h1>
-        <p>DOMAIN: NEGARANDEH.CO.UK</p>
-        <div class="status-grid">
-            <div>MTA-STS: <span class="secure">ENFORCED</span></div>
-            <div>DMARC: <span class="secure">REJECT</span></div>
-            <div>SPF: <span class="secure">PASS</span></div>
-            <div>TLS-RPT: <span class="secure">ACTIVE</span></div>
-        </div>
-        <p style="margin-top:40px; font-size: 0.8em;">[ STATUS ]: PERIMETER_LOCKED</p>
+    <div class="grid"></div>
+    <div class="core">
+        <h1>NEGARANDEH.CO.UK</h1>
+        <svg width="200" height="60">
+            <path class="pulse-line" d="M0,30 L40,30 L50,10 L60,50 L70,30 L200,30" />
+        </svg>
+        <div style="margin-top:20px;">[SYSTEM: IRONCLAD]</div>
+        <div style="font-size: 0.6em; margin-top:20px;">SECURITY_PROTOCOL_ACTIVE_05212026</div>
     </div>
 </body>
 </html>
