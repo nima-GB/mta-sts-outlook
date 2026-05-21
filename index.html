@@ -1,0 +1,1680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="dark" />
+  <title>SERAPH // Defence Intelligence Interface</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700;800&family=IBM+Plex+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+  <script src="https://cdn.jsdelivr.net/npm/three@0.184.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@observablehq/plot@0.6/dist/plot.umd.min.js"></script>
+
+  <style>
+    :root{
+      --bg:#010302;
+      --panel:rgba(6,12,9,.68);
+      --panel-strong:rgba(4,8,6,.9);
+      --glass:rgba(0,255,153,.05);
+      --line:rgba(0,255,153,.14);
+      --line-soft:rgba(0,255,153,.08);
+      --neon:#00ff99;
+      --cyan:#52ddff;
+      --pink:#ff4d8a;
+      --warn:#ffd24d;
+      --danger:#ff356b;
+      --text:#dcfff1;
+      --muted:#8bb9ab;
+      --shadow:0 0 40px rgba(0,255,153,.10);
+      --radius:22px;
+      --max:1600px;
+    }
+
+    *{box-sizing:border-box}
+    html,body{
+      width:100%;
+      min-height:100%;
+      margin:0;
+      background:
+        radial-gradient(circle at 50% 20%, rgba(0,255,153,.10), transparent 24%),
+        radial-gradient(circle at 80% 30%, rgba(82,221,255,.08), transparent 18%),
+        radial-gradient(circle at 15% 75%, rgba(255,77,138,.06), transparent 18%),
+        linear-gradient(180deg, #000 0%, var(--bg) 50%, #000 100%);
+      color:var(--text);
+      font-family:"IBM Plex Mono", monospace;
+      overflow-x:hidden;
+    }
+
+    body{
+      position:relative;
+      isolation:isolate;
+    }
+
+    body::before{
+      content:"";
+      position:fixed;
+      inset:0;
+      z-index:1;
+      pointer-events:none;
+      opacity:.28;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.014), transparent 18%, transparent 82%, rgba(255,255,255,.01)),
+        repeating-linear-gradient(to bottom, rgba(255,255,255,.02) 0 1px, transparent 2px 4px);
+      mix-blend-mode:screen;
+    }
+
+    #bgCanvas{
+      position:fixed;
+      inset:0;
+      width:100%;
+      height:100%;
+      z-index:0;
+      display:block;
+    }
+
+    .noise{
+      position:fixed;
+      inset:0;
+      z-index:2;
+      pointer-events:none;
+      opacity:.06;
+      background-image:
+        repeating-radial-gradient(circle at 50% 50%, rgba(255,255,255,.18) 0 1px, transparent 1px 4px);
+      animation:noiseShift .28s infinite steps(2,end);
+      mix-blend-mode:screen;
+    }
+
+    .scanbeam{
+      position:fixed;
+      left:0;
+      top:-20vh;
+      width:100%;
+      height:20vh;
+      z-index:2;
+      pointer-events:none;
+      background:linear-gradient(to bottom, transparent, rgba(0,255,153,.09), transparent);
+      filter:blur(1px);
+      animation:scanMove 7s linear infinite;
+      mix-blend-mode:screen;
+    }
+
+    @keyframes noiseShift{
+      0%{transform:translate3d(0,0,0)}
+      25%{transform:translate3d(-1px,1px,0)}
+      50%{transform:translate3d(1px,-1px,0)}
+      75%{transform:translate3d(1px,2px,0)}
+      100%{transform:translate3d(0,0,0)}
+    }
+
+    @keyframes scanMove{
+      from{transform:translateY(-20vh)}
+      to{transform:translateY(120vh)}
+    }
+
+    .wrap{
+      position:relative;
+      z-index:5;
+      width:100%;
+      min-height:100vh;
+      padding:20px;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+    }
+
+    .shell{
+      width:min(var(--max), 100%);
+      min-height:min(96vh, 1280px);
+      border-radius:30px;
+      border:1px solid var(--line);
+      overflow:hidden;
+      position:relative;
+      background:
+        radial-gradient(circle at 50% 20%, rgba(0,255,153,.08), transparent 28%),
+        linear-gradient(180deg, rgba(0,255,153,.045), rgba(0,0,0,.88));
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,.02) inset,
+        0 0 84px rgba(0,255,153,.08),
+        inset 0 0 120px rgba(0,255,153,.04);
+      backdrop-filter:blur(12px);
+      transform-style:preserve-3d;
+      transition:transform .12s ease-out;
+    }
+
+    .shell::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      pointer-events:none;
+      background:
+        linear-gradient(135deg, rgba(0,255,153,.06), transparent 30%),
+        radial-gradient(circle at 50% 50%, transparent 43%, rgba(0,0,0,.58) 100%);
+      opacity:.95;
+    }
+
+    .topbar{
+      position:relative;
+      z-index:4;
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:18px;
+      padding:26px 30px 20px;
+      border-bottom:1px solid rgba(0,255,153,.08);
+    }
+
+    .brand{
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      min-width:0;
+    }
+
+    .logo{
+      position:relative;
+      display:inline-block;
+      width:fit-content;
+      font-family:"Orbitron", sans-serif;
+      font-size:clamp(1.45rem, 2.5vw, 2.7rem);
+      font-weight:800;
+      letter-spacing:.42em;
+      line-height:1;
+      text-transform:uppercase;
+      color:var(--neon);
+      text-shadow:0 0 14px rgba(0,255,153,.65), 0 0 36px rgba(0,255,153,.20);
+    }
+
+    .logo::before,
+    .logo::after{
+      content:attr(data-text);
+      position:absolute;
+      inset:0;
+      opacity:.45;
+      pointer-events:none;
+    }
+
+    .logo::before{
+      color:var(--pink);
+      transform:translate(-1px,0);
+      clip-path:inset(0 0 54% 0);
+    }
+
+    .logo::after{
+      color:var(--cyan);
+      transform:translate(1px,0);
+      clip-path:inset(46% 0 0 0);
+    }
+
+    .tagline{
+      max-width:78ch;
+      font-size:.8rem;
+      line-height:1.65;
+      letter-spacing:.34em;
+      text-transform:uppercase;
+      color:var(--muted);
+    }
+
+    .status{
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      align-items:flex-end;
+      text-align:right;
+      min-width:260px;
+    }
+
+    .status-pill{
+      padding:10px 14px;
+      border-radius:999px;
+      border:1px solid rgba(0,255,153,.18);
+      background:rgba(0,255,153,.05);
+      color:var(--neon);
+      font-size:.76rem;
+      letter-spacing:.24em;
+      text-transform:uppercase;
+      white-space:nowrap;
+      box-shadow:0 0 16px rgba(0,255,153,.08);
+    }
+
+    .clockline{
+      font-size:.78rem;
+      color:var(--muted);
+      letter-spacing:.18em;
+      text-transform:uppercase;
+      white-space:nowrap;
+    }
+
+    .layout{
+      position:relative;
+      z-index:4;
+      display:grid;
+      grid-template-columns:260px minmax(0,1fr) 360px;
+      gap:18px;
+      padding:18px 18px 20px;
+      align-items:stretch;
+    }
+
+    .rail,
+    .main,
+    .side{
+      min-height:0;
+    }
+
+    .rail{
+      display:flex;
+      flex-direction:column;
+      gap:14px;
+    }
+
+    .tile,
+    .card{
+      position:relative;
+      overflow:hidden;
+      border-radius:var(--radius);
+      background:var(--panel);
+      border:1px solid var(--line);
+      box-shadow:var(--shadow);
+      backdrop-filter:blur(8px);
+    }
+
+    .tile::before,
+    .card::before,
+    .panel::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      pointer-events:none;
+      background:
+        linear-gradient(135deg, rgba(255,255,255,.05), transparent 28%),
+        radial-gradient(circle at 50% 0%, rgba(0,255,153,.08), transparent 42%);
+      opacity:.6;
+    }
+
+    .tile-inner,
+    .card-inner,
+    .panel-inner{
+      position:relative;
+      z-index:1;
+      padding:18px;
+    }
+
+    .rail-heading{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+      font-family:"Orbitron", sans-serif;
+      color:var(--neon);
+      text-transform:uppercase;
+      letter-spacing:.22em;
+      font-size:.74rem;
+      margin-bottom:14px;
+    }
+
+    .rail-list{
+      display:grid;
+      gap:10px;
+    }
+
+    .rail-item{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:16px;
+      padding:12px 14px;
+      border-radius:14px;
+      background:rgba(0,255,153,.04);
+      border:1px solid rgba(0,255,153,.08);
+      font-size:.9rem;
+    }
+
+    .rail-item span:last-child{ color:var(--neon); }
+    .rail-item .warn{ color:var(--warn); }
+    .rail-item .danger{ color:var(--danger); }
+
+    .mini-grid{
+      display:grid;
+      grid-template-columns:repeat(2, minmax(0,1fr));
+      gap:12px;
+      margin-top:14px;
+    }
+
+    .mini{
+      padding:14px;
+      border-radius:16px;
+      border:1px solid rgba(0,255,153,.08);
+      background:rgba(0,0,0,.14);
+      min-height:92px;
+    }
+
+    .mini label{
+      display:block;
+      margin-bottom:10px;
+      font-size:.66rem;
+      letter-spacing:.28em;
+      text-transform:uppercase;
+      color:var(--muted);
+    }
+
+    .mini strong{
+      font-family:"Orbitron", sans-serif;
+      font-size:1.08rem;
+      color:var(--neon);
+      text-shadow:0 0 14px rgba(0,255,153,.24);
+    }
+
+    .main{
+      display:grid;
+      grid-template-rows:auto auto 1fr;
+      gap:18px;
+      min-width:0;
+    }
+
+    .hero{
+      position:relative;
+      overflow:hidden;
+      border-radius:30px;
+      border:1px solid var(--line);
+      background:
+        radial-gradient(circle at 50% 35%, rgba(0,255,153,.14), transparent 24%),
+        radial-gradient(circle at 20% 20%, rgba(82,221,255,.10), transparent 18%),
+        radial-gradient(circle at 80% 30%, rgba(255,77,138,.06), transparent 16%),
+        linear-gradient(180deg, rgba(0,0,0,.1), rgba(0,0,0,.35));
+      box-shadow:var(--shadow);
+      min-height:500px;
+    }
+
+    .hero::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      pointer-events:none;
+      background:
+        linear-gradient(180deg, transparent, rgba(0,255,153,.05), transparent),
+        repeating-linear-gradient(to bottom, rgba(255,255,255,.015) 0 1px, transparent 2px 6px);
+      opacity:.75;
+    }
+
+    .hero-inner{
+      position:relative;
+      z-index:1;
+      display:grid;
+      grid-template-columns:minmax(0,1.2fr) minmax(320px,.8fr);
+      gap:18px;
+      padding:24px;
+      align-items:stretch;
+    }
+
+    .hero-copy{
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+      gap:18px;
+      padding:10px 0;
+      min-width:0;
+    }
+
+    .eyebrow{
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      width:fit-content;
+      padding:9px 14px;
+      border:1px solid rgba(0,255,153,.16);
+      border-radius:999px;
+      background:rgba(0,255,153,.05);
+      color:var(--neon);
+      font-size:.74rem;
+      letter-spacing:.28em;
+      text-transform:uppercase;
+    }
+
+    .eyebrow::before{
+      content:"";
+      width:8px;
+      height:8px;
+      border-radius:50%;
+      background:var(--neon);
+      box-shadow:0 0 12px var(--neon);
+    }
+
+    .hero h1{
+      margin:0;
+      font-family:"Orbitron", sans-serif;
+      font-size:clamp(2.8rem, 5.8vw, 6.6rem);
+      line-height:.9;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      color:#f5fff9;
+      text-shadow:0 0 16px rgba(0,255,153,.18), 0 0 34px rgba(0,255,153,.10);
+    }
+
+    .hero h1 span{
+      display:block;
+      color:var(--neon);
+      text-shadow:0 0 22px rgba(0,255,153,.52), 0 0 42px rgba(0,255,153,.18);
+    }
+
+    .hero p{
+      margin:0;
+      max-width:72ch;
+      font-size:clamp(.95rem, 1.05vw, 1.06rem);
+      line-height:1.9;
+      color:#cdeede;
+    }
+
+    .hero-actions{
+      display:flex;
+      flex-wrap:wrap;
+      gap:14px;
+      margin-top:4px;
+    }
+
+    .btn{
+      appearance:none;
+      border:none;
+      cursor:pointer;
+      padding:14px 18px;
+      border-radius:14px;
+      font-family:"Orbitron", sans-serif;
+      text-transform:uppercase;
+      letter-spacing:.22em;
+      font-size:.75rem;
+      color:#01120b;
+      background:linear-gradient(180deg, rgba(0,255,153,1), rgba(0,220,132,1));
+      box-shadow:0 0 18px rgba(0,255,153,.22);
+      transition:transform .18s ease, box-shadow .18s ease, filter .18s ease;
+    }
+
+    .btn:hover{
+      transform:translateY(-1px);
+      box-shadow:0 0 26px rgba(0,255,153,.32);
+      filter:saturate(1.1);
+    }
+
+    .btn.secondary{
+      color:var(--text);
+      background:rgba(0,255,153,.05);
+      border:1px solid rgba(0,255,153,.16);
+      box-shadow:none;
+    }
+
+    .btn.secondary:hover{
+      background:rgba(0,255,153,.08);
+    }
+
+    .hero-right{
+      display:grid;
+      gap:14px;
+      align-content:start;
+    }
+
+    .stat-grid{
+      display:grid;
+      grid-template-columns:repeat(2, minmax(0,1fr));
+      gap:12px;
+    }
+
+    .stat{
+      padding:14px;
+      border-radius:16px;
+      background:rgba(0,0,0,.16);
+      border:1px solid rgba(0,255,153,.08);
+      position:relative;
+      overflow:hidden;
+    }
+
+    .stat::after{
+      content:"";
+      position:absolute;
+      width:130px;
+      height:130px;
+      right:-48px;
+      bottom:-48px;
+      border-radius:50%;
+      background:radial-gradient(circle, rgba(0,255,153,.14), transparent 68%);
+      pointer-events:none;
+    }
+
+    .stat label{
+      display:block;
+      margin-bottom:12px;
+      font-size:.66rem;
+      letter-spacing:.28em;
+      text-transform:uppercase;
+      color:var(--muted);
+    }
+
+    .stat strong{
+      display:block;
+      font-family:"Orbitron", sans-serif;
+      font-size:1.16rem;
+      letter-spacing:.08em;
+      color:var(--neon);
+    }
+
+    .core-shell{
+      position:relative;
+      min-height:260px;
+      border-radius:28px;
+      border:1px solid rgba(0,255,153,.11);
+      background:
+        radial-gradient(circle at 50% 45%, rgba(0,255,153,.16), transparent 22%),
+        radial-gradient(circle at 50% 50%, rgba(82,221,255,.06), transparent 34%),
+        linear-gradient(180deg, rgba(0,0,0,.12), rgba(0,0,0,.28));
+      overflow:hidden;
+    }
+
+    .core-shell::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:
+        repeating-linear-gradient(to bottom, rgba(255,255,255,.015) 0 1px, transparent 2px 5px),
+        linear-gradient(90deg, transparent, rgba(0,255,153,.08), transparent);
+      opacity:.7;
+      pointer-events:none;
+    }
+
+    #coreStage{
+      position:absolute;
+      inset:0;
+    }
+
+    .core-label{
+      position:absolute;
+      left:18px;
+      right:18px;
+      bottom:18px;
+      z-index:2;
+      display:flex;
+      justify-content:space-between;
+      gap:14px;
+      align-items:flex-end;
+      pointer-events:none;
+      font-size:.72rem;
+      letter-spacing:.18em;
+      text-transform:uppercase;
+      color:var(--muted);
+      line-height:1.5;
+    }
+
+    .core-label .right{
+      text-align:right;
+    }
+
+    .toolbar{
+      display:flex;
+      justify-content:space-between;
+      gap:16px;
+      align-items:center;
+      padding:0 2px;
+    }
+
+    .toolbar-left{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+
+    .chip{
+      padding:9px 12px;
+      border-radius:999px;
+      border:1px solid rgba(0,255,153,.16);
+      background:rgba(0,255,153,.05);
+      color:var(--neon);
+      font-size:.7rem;
+      letter-spacing:.22em;
+      text-transform:uppercase;
+      white-space:nowrap;
+    }
+
+    .toolbar-right{
+      font-size:.72rem;
+      letter-spacing:.2em;
+      text-transform:uppercase;
+      color:var(--muted);
+    }
+
+    .bottom{
+      display:grid;
+      grid-template-columns:1.15fr .85fr;
+      gap:18px;
+      min-width:0;
+    }
+
+    .panel{
+      position:relative;
+      overflow:hidden;
+      border-radius:28px;
+      border:1px solid var(--line);
+      background:var(--panel-strong);
+      box-shadow:var(--shadow);
+      backdrop-filter:blur(8px);
+      min-width:0;
+    }
+
+    .panel-inner{
+      position:relative;
+      z-index:1;
+      padding:18px;
+    }
+
+    .panel-head{
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      align-items:center;
+      padding-bottom:14px;
+      margin-bottom:14px;
+      border-bottom:1px solid rgba(0,255,153,.08);
+      font-family:"Orbitron", sans-serif;
+      text-transform:uppercase;
+      letter-spacing:.24em;
+      color:var(--neon);
+      font-size:.74rem;
+    }
+
+    .panel-head .sub{
+      color:var(--muted);
+      font-size:.7rem;
+    }
+
+    .terminal{
+      height:330px;
+      overflow:auto;
+      scrollbar-width:thin;
+      scrollbar-color: rgba(0,255,153,.28) transparent;
+      color:#b9ffd9;
+      line-height:1.72;
+      font-size:.9rem;
+    }
+
+    .terminal::-webkit-scrollbar{width:8px}
+    .terminal::-webkit-scrollbar-thumb{
+      background:rgba(0,255,153,.26);
+      border-radius:999px;
+    }
+
+    .terminal-line{
+      white-space:pre-wrap;
+    }
+
+    .cursor{
+      display:inline-block;
+      width:9px;
+      height:16px;
+      background:var(--neon);
+      margin-left:2px;
+      vertical-align:middle;
+      animation:blink 1s steps(1,end) infinite;
+    }
+
+    @keyframes blink{50%{opacity:0}}
+
+    .chart-box{
+      display:grid;
+      gap:14px;
+    }
+
+    .plot{
+      min-height:180px;
+      border-radius:18px;
+      overflow:hidden;
+      border:1px solid rgba(0,255,153,.08);
+      background:rgba(0,0,0,.12);
+    }
+
+    .status-stack{
+      display:grid;
+      gap:12px;
+    }
+
+    .status-row{
+      display:flex;
+      justify-content:space-between;
+      gap:14px;
+      align-items:center;
+      padding:12px 14px;
+      border-radius:14px;
+      border:1px solid rgba(0,255,153,.08);
+      background:rgba(0,255,153,.04);
+      font-size:.9rem;
+    }
+
+    .status-row span:last-child{ color:var(--neon); }
+    .status-row .warn{ color:var(--warn); }
+    .status-row .danger{ color:var(--danger); }
+
+    .map{
+      position:relative;
+      aspect-ratio:16/10;
+      border-radius:22px;
+      border:1px solid rgba(0,255,153,.12);
+      overflow:hidden;
+      background:
+        radial-gradient(circle at 50% 50%, rgba(0,255,153,.10), transparent 42%),
+        radial-gradient(circle at 50% 50%, rgba(82,221,255,.05), transparent 58%),
+        linear-gradient(180deg, rgba(0,0,0,.12), rgba(0,0,0,.36));
+    }
+
+    .map svg{
+      position:absolute;
+      inset:0;
+      width:100%;
+      height:100%;
+    }
+
+    .map .gridline{
+      stroke:rgba(0,255,153,.08);
+      stroke-width:1;
+      stroke-dasharray:4 7;
+    }
+
+    .map .route{
+      fill:none;
+      stroke:rgba(0,255,153,.55);
+      stroke-width:1.8;
+      stroke-dasharray:10 9;
+      animation:dash 3.6s linear infinite;
+    }
+
+    .map .node{
+      fill:#00ff99;
+      filter:drop-shadow(0 0 8px rgba(0,255,153,.8));
+      animation:pulseNode 2.6s infinite ease-in-out;
+    }
+
+    .map .node.delay{ animation-delay:1s; }
+    .map .node.blue{
+      fill:#52ddff;
+      filter:drop-shadow(0 0 8px rgba(82,221,255,.8));
+    }
+    .map .node.red{
+      fill:#ff4d8a;
+      filter:drop-shadow(0 0 8px rgba(255,77,138,.8));
+    }
+
+    @keyframes dash{to{stroke-dashoffset:-120}}
+    @keyframes pulseNode{
+      0%,100%{opacity:.52;transform:scale(.92)}
+      50%{opacity:1;transform:scale(1.1)}
+    }
+
+    .map-caption{
+      display:flex;
+      justify-content:space-between;
+      gap:14px;
+      align-items:center;
+      font-size:.78rem;
+      letter-spacing:.2em;
+      text-transform:uppercase;
+      color:var(--muted);
+    }
+
+    .ticker{
+      display:flex;
+      gap:18px;
+      overflow:hidden;
+      white-space:nowrap;
+      border-top:1px solid rgba(0,255,153,.08);
+      background:rgba(0,0,0,.2);
+    }
+
+    .ticker-inner{
+      display:inline-flex;
+      gap:28px;
+      padding:12px 16px;
+      animation:marquee 24s linear infinite;
+      color:var(--muted);
+      letter-spacing:.22em;
+      text-transform:uppercase;
+      font-size:.72rem;
+    }
+
+    .ticker strong{
+      color:var(--neon);
+      font-weight:600;
+    }
+
+    @keyframes marquee{
+      from{transform:translateX(0)}
+      to{transform:translateX(-50%)}
+    }
+
+    .footer{
+      display:flex;
+      justify-content:space-between;
+      gap:16px;
+      align-items:center;
+      padding:0 4px;
+      color:var(--muted);
+      font-size:.72rem;
+      letter-spacing:.24em;
+      text-transform:uppercase;
+    }
+
+    .footer strong{ color:var(--neon); font-weight:600; }
+
+    @media (max-width: 1280px){
+      .layout{
+        grid-template-columns:1fr;
+      }
+      .rail{
+        order:2;
+      }
+      .main{
+        order:1;
+      }
+      .side{
+        order:3;
+      }
+      .hero-inner{
+        grid-template-columns:1fr;
+      }
+      .bottom{
+        grid-template-columns:1fr;
+      }
+      .shell{
+        min-height:auto;
+      }
+    }
+
+    @media (max-width: 760px){
+      .wrap{padding:0}
+      .shell{
+        min-height:100vh;
+        border:none;
+        border-radius:0;
+      }
+      .topbar{
+        padding:18px 16px 16px;
+        flex-direction:column;
+        align-items:flex-start;
+      }
+      .status{
+        align-items:flex-start;
+        text-align:left;
+        min-width:0;
+      }
+      .layout{
+        padding:16px;
+        gap:14px;
+      }
+      .hero-inner{
+        padding:16px;
+      }
+      .footer{
+        padding:0 2px 16px;
+        flex-direction:column;
+        align-items:flex-start;
+      }
+      .stat-grid{
+        grid-template-columns:1fr;
+      }
+      .mini-grid{
+        grid-template-columns:1fr;
+      }
+      .core-shell{
+        min-height:240px;
+      }
+      .terminal{
+        height:220px;
+      }
+      .ticker-inner{
+        animation-duration:20s;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce){
+      *,*::before,*::after{
+        animation-duration:.001ms !important;
+        animation-iteration-count:1 !important;
+        transition:none !important;
+        scroll-behavior:auto !important;
+      }
+      .noise,.scanbeam{display:none}
+    }
+  </style>
+</head>
+<body>
+  <canvas id="bgCanvas" aria-hidden="true"></canvas>
+  <div class="noise" aria-hidden="true"></div>
+  <div class="scanbeam" aria-hidden="true"></div>
+
+  <main class="wrap">
+    <section class="shell" aria-label="SERAPH landing page">
+
+      <header class="topbar">
+        <div class="brand">
+          <div class="logo" data-text="SERAPH_AI">SERAPH_AI</div>
+          <div class="tagline">
+            Defence intelligence, adaptive signal mapping, and live synthetic cognition in a single premium interface.
+          </div>
+        </div>
+
+        <div class="status">
+          <div class="status-pill">Live cognitive relay</div>
+          <div class="clockline" id="clockline">UTC // --:--:--</div>
+        </div>
+      </header>
+
+      <section class="layout">
+        <aside class="rail">
+          <div class="tile">
+            <div class="tile-inner">
+              <div class="rail-heading">
+                <span>Command rail</span>
+                <span>01</span>
+              </div>
+              <div class="rail-list">
+                <div class="rail-item"><span>Entropy field</span><span id="entropyVal">98.41%</span></div>
+                <div class="rail-item"><span>Signal integrity</span><span id="integrityVal">STABLE</span></div>
+                <div class="rail-item"><span>AI cognition</span><span id="cognitionVal">ACTIVE</span></div>
+                <div class="rail-item"><span>Perimeter</span><span id="perimeterVal">SEALED</span></div>
+              </div>
+
+              <div class="mini-grid">
+                <div class="mini">
+                  <label>Latency</label>
+                  <strong id="latencyVal">21 ms</strong>
+                </div>
+                <div class="mini">
+                  <label>Confidence</label>
+                  <strong id="confidenceVal">99.8%</strong>
+                </div>
+                <div class="mini">
+                  <label>Loss</label>
+                  <strong id="lossVal">0.04%</strong>
+                </div>
+                <div class="mini">
+                  <label>Response</label>
+                  <strong id="responseVal">ONLINE</strong>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="tile">
+            <div class="tile-inner">
+              <div class="rail-heading">
+                <span>Protocols</span>
+                <span>02</span>
+              </div>
+              <div class="rail-list">
+                <div class="rail-item"><span>Zero-trust mesh</span><span>ENFORCED</span></div>
+                <div class="rail-item"><span>AES-256 relay</span><span>LOCKED</span></div>
+                <div class="rail-item"><span>ChaCha20 stream</span><span>ACTIVE</span></div>
+                <div class="rail-item"><span>Seraph tumbler</span><span class="warn">OBFUSCATED</span></div>
+                <div class="rail-item"><span>Vector scan</span><span class="danger">MONITORING</span></div>
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        <section class="main">
+          <section class="hero">
+            <div class="hero-inner">
+              <div class="hero-copy">
+                <div class="eyebrow">Classified synthetic intelligence layer</div>
+                <h1>
+                  Autonomous
+                  <span>defence grid</span>
+                </h1>
+                <p>
+                  A denser cyber-intelligence landing page with stronger hierarchy, holographic geometry, live analytics, network routing, and terminal telemetry. It is built to feel engineered rather than decorated.
+                </p>
+                <div class="hero-actions">
+                  <button class="btn" type="button" onclick="document.getElementById('terminal').scrollIntoView({behavior:'smooth', block:'center'})">Inspect telemetry</button>
+                  <button class="btn secondary" type="button" onclick="document.querySelector('.map').scrollIntoView({behavior:'smooth', block:'center'})">View threat map</button>
+                </div>
+              </div>
+
+              <div class="hero-right">
+                <div class="card">
+                  <div class="card-inner">
+                    <div class="stat-grid">
+                      <div class="stat"><label>Mesh depth</label><strong>ULTRA</strong></div>
+                      <div class="stat"><label>Threat drift</label><strong>STABLE</strong></div>
+                      <div class="stat"><label>Core state</label><strong>LIVE</strong></div>
+                      <div class="stat"><label>Lock mode</label><strong>SEALED</strong></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="core-shell">
+                  <div id="coreStage"></div>
+                  <div class="core-label">
+                    <div class="left">
+                      quantum relay stabilised<br>
+                      adaptive geometry engaged
+                    </div>
+                    <div class="right">
+                      signal depth: ultra<br>
+                      latency: low / locked
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <div class="toolbar">
+            <div class="toolbar-left">
+              <div class="chip">Live analytics</div>
+              <div class="chip">Waveform</div>
+              <div class="chip">Heatmap</div>
+              <div class="chip">SIGINT</div>
+            </div>
+            <div class="toolbar-right">dynamic surface / encrypted routing / predictive loop</div>
+          </div>
+
+          <section class="bottom">
+            <article class="panel">
+              <div class="panel-inner">
+                <div class="panel-head">
+                  <span>Telemetry analytics</span>
+                  <span class="sub">observable plot</span>
+                </div>
+                <div class="chart-box" id="telemetryHost"></div>
+              </div>
+            </article>
+
+            <article class="panel">
+              <div class="panel-inner">
+                <div class="panel-head">
+                  <span>Threat geometry</span>
+                  <span class="sub">network map</span>
+                </div>
+
+                <div class="map">
+                  <svg viewBox="0 0 1000 640" preserveAspectRatio="none" aria-hidden="true">
+                    <path class="gridline" d="M0 120 H1000"></path>
+                    <path class="gridline" d="M0 240 H1000"></path>
+                    <path class="gridline" d="M0 360 H1000"></path>
+                    <path class="gridline" d="M0 480 H1000"></path>
+                    <path class="gridline" d="M170 0 V640"></path>
+                    <path class="gridline" d="M340 0 V640"></path>
+                    <path class="gridline" d="M510 0 V640"></path>
+                    <path class="gridline" d="M680 0 V640"></path>
+                    <path class="gridline" d="M850 0 V640"></path>
+
+                    <path class="route" d="M90 450 C180 300, 260 250, 355 260 S530 340, 650 210 S830 110, 910 160"></path>
+                    <path class="route" d="M160 165 C260 220, 340 235, 420 190 S610 70, 730 150 S860 280, 935 340"></path>
+                    <path class="route" d="M120 560 C240 470, 350 475, 460 500 S650 560, 760 470 S880 390, 940 455"></path>
+
+                    <circle class="node" cx="90" cy="450" r="9"></circle>
+                    <circle class="node delay" cx="355" cy="260" r="10"></circle>
+                    <circle class="node" cx="650" cy="210" r="11"></circle>
+                    <circle class="node delay blue" cx="910" cy="160" r="9"></circle>
+
+                    <circle class="node blue" cx="160" cy="165" r="8"></circle>
+                    <circle class="node delay" cx="420" cy="190" r="10"></circle>
+                    <circle class="node blue" cx="730" cy="150" r="9"></circle>
+                    <circle class="node delay red" cx="935" cy="340" r="10"></circle>
+
+                    <circle class="node" cx="120" cy="560" r="8"></circle>
+                    <circle class="node delay" cx="460" cy="500" r="10"></circle>
+                    <circle class="node blue" cx="760" cy="470" r="9"></circle>
+                    <circle class="node delay" cx="940" cy="455" r="8"></circle>
+                  </svg>
+                </div>
+
+                <div class="map-caption">
+                  <span>Nodes self-adjust in real time</span>
+                  <span>Adaptive response enabled</span>
+                </div>
+              </div>
+            </article>
+
+            <article class="panel">
+              <div class="panel-inner">
+                <div class="panel-head">
+                  <span>Live telemetry feed</span>
+                  <span class="sub">sigint // streaming</span>
+                </div>
+                <div class="terminal" id="terminal" aria-live="polite"></div>
+              </div>
+            </article>
+
+            <article class="panel">
+              <div class="panel-inner">
+                <div class="panel-head">
+                  <span>Response matrix</span>
+                  <span class="sub">encrypted</span>
+                </div>
+                <div class="status-stack">
+                  <div class="status-row"><span>Packet inspection</span><span>PASSIVE</span></div>
+                  <div class="status-row"><span>Key exchange</span><span>VALID</span></div>
+                  <div class="status-row"><span>Threat suppression</span><span>AGGRESSIVE</span></div>
+                  <div class="status-row"><span>AI uncertainty</span><span class="warn">LOW</span></div>
+                  <div class="status-row"><span>Command authority</span><span>LOCAL</span></div>
+                </div>
+              </div>
+            </article>
+          </section>
+
+          <div class="ticker" aria-hidden="true">
+            <div class="ticker-inner">
+              <span><strong>SERAPH</strong> // autonomous cognition online</span>
+              <span>entropy field stabilised</span>
+              <span>adaptive countermeasures armed</span>
+              <span>SIGINT relay passive</span>
+              <span>zero-trust perimeter sealed</span>
+              <span>neural mesh synchronised</span>
+              <span><strong>SERAPH</strong> // autonomous cognition online</span>
+              <span>entropy field stabilised</span>
+              <span>adaptive countermeasures armed</span>
+              <span>SIGINT relay passive</span>
+              <span>zero-trust perimeter sealed</span>
+              <span>neural mesh synchronised</span>
+            </div>
+          </div>
+
+          <footer class="footer">
+            <div><strong>SERAPH</strong> // classified defence grid</div>
+            <div>desktop-grade depth, mobile-safe fallbacks</div>
+          </footer>
+        </section>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const isMobile = window.matchMedia('(max-width: 760px)').matches;
+    const shell = document.querySelector('.shell');
+
+    // Clock
+    const clockline = document.getElementById('clockline');
+    function tickClock() {
+      const d = new Date();
+      const pad = n => String(n).padStart(2, '0');
+      clockline.textContent = `UTC // ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}`;
+    }
+    tickClock();
+    setInterval(tickClock, 1000);
+
+    // Dynamic metrics
+    const entropyVal = document.getElementById('entropyVal');
+    const integrityVal = document.getElementById('integrityVal');
+    const cognitionVal = document.getElementById('cognitionVal');
+    const perimeterVal = document.getElementById('perimeterVal');
+    const latencyVal = document.getElementById('latencyVal');
+    const confidenceVal = document.getElementById('confidenceVal');
+    const lossVal = document.getElementById('lossVal');
+    const responseVal = document.getElementById('responseVal');
+
+    let entropy = 98.41;
+    let latency = 21;
+    let confidence = 99.80;
+    let loss = 0.04;
+    let flip = false;
+
+    function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+
+    function updateMetrics(){
+      entropy = clamp(entropy + (Math.random() - 0.45) * 1.0, 96.8, 99.96);
+      latency = clamp(latency + (Math.random() - 0.5) * 3.3, 8, 32);
+      confidence = clamp(confidence + (Math.random() - 0.48) * 0.15, 99.1, 99.99);
+      loss = clamp(loss + (Math.random() - 0.5) * 0.01, 0.01, 0.12);
+      flip = !flip;
+
+      entropyVal.textContent = `${entropy.toFixed(2)}%`;
+      integrityVal.textContent = confidence > 99.4 ? 'STABLE' : 'MONITOR';
+      cognitionVal.textContent = flip ? 'ACTIVE' : 'PREDICTIVE';
+      perimeterVal.textContent = flip ? 'SEALED' : 'LOCKED';
+      latencyVal.textContent = `${Math.round(latency)} ms`;
+      confidenceVal.textContent = `${confidence.toFixed(2)}%`;
+      lossVal.textContent = `${loss.toFixed(2)}%`;
+      responseVal.textContent = flip ? 'ONLINE' : 'READY';
+    }
+    updateMetrics();
+    setInterval(updateMetrics, 1900);
+
+    // Terminal
+    const terminal = document.getElementById('terminal');
+    const feed = [
+      "[SYS] Establishing encrypted relay chain...",
+      "[AI] Neural lattice synchronised.",
+      "[CORE] Quantum entropy stabilised.",
+      "[SCAN] Hostile surface vectors under review.",
+      "[AUTH] Zero-trust verification complete.",
+      "[NET] Segmented mesh active.",
+      "[CRYPTO] AES-256 channel sealed.",
+      "[AI] Predictive threat modelling engaged.",
+      "[SIGINT] Passive signal collection online.",
+      "[SERAPH] Autonomous intelligence initialised."
+    ];
+    let feedIndex = 0;
+
+    function pushTerminalLine() {
+      const line = document.createElement('div');
+      line.className = 'terminal-line';
+      line.textContent = feed[feedIndex];
+      const caret = document.createElement('span');
+      caret.className = 'cursor';
+      line.appendChild(caret);
+      terminal.appendChild(line);
+      terminal.scrollTop = terminal.scrollHeight;
+      feedIndex = (feedIndex + 1) % feed.length;
+      while (terminal.children.length > 10) terminal.removeChild(terminal.firstChild);
+    }
+    pushTerminalLine();
+    setInterval(pushTerminalLine, 900);
+
+    // Observable Plot analytics
+    const telemetryHost = document.getElementById('telemetryHost');
+    let phase = 0;
+
+    function series(count, base, amp, noise, speed) {
+      return Array.from({ length: count }, (_, i) => ({
+        t: i,
+        value: base + Math.sin((i + phase) / speed) * amp + (Math.random() - 0.5) * noise
+      }));
+    }
+
+    function renderPlots() {
+      telemetryHost.innerHTML = '';
+
+      const entropyData = series(72, 68, 9, 3, 5.1);
+      const threatData = series(72, 26, 5, 2.5, 7.8);
+      const sectors = Array.from({ length: 9 }, (_, i) => ({
+        sector: `S${i + 1}`,
+        intensity: 18 + Math.round(14 * Math.abs(Math.sin((i + phase) / 2.8))) + Math.round(Math.random() * 6)
+      }));
+
+      const title1 = document.createElement('div');
+      title1.className = 'panel-head';
+      title1.innerHTML = '<span>Signal entropy</span><span class="sub">adaptive waveform</span>';
+
+      const plot1 = document.createElement('div');
+      plot1.className = 'plot';
+      plot1.appendChild(Plot.plot({
+        height: 186,
+        marginLeft: 44,
+        marginRight: 18,
+        marginTop: 14,
+        marginBottom: 30,
+        background: 'transparent',
+        style: { color: '#00ff99', fontFamily: 'IBM Plex Mono, monospace' },
+        x: { label: null, ticks: 6, tickSize: 5 },
+        y: { label: null, grid: true, nice: true },
+        marks: [
+          Plot.areaY(entropyData, { x: 't', y: 'value', curve: 'basis', fill: '#00ff99', fillOpacity: 0.08 }),
+          Plot.lineY(entropyData, { x: 't', y: 'value', curve: 'basis', stroke: '#00ff99', strokeWidth: 2 }),
+          Plot.dot(entropyData.filter((_, i) => i % 12 === 0), { x: 't', y: 'value', fill: '#dfffee', r: 2.3 })
+        ]
+      }));
+
+      const title2 = document.createElement('div');
+      title2.className = 'panel-head';
+      title2.innerHTML = '<span>Threat intensity</span><span class="sub">sector heat</span>';
+
+      const plot2 = document.createElement('div');
+      plot2.className = 'plot';
+      plot2.appendChild(Plot.plot({
+        height: 160,
+        marginLeft: 44,
+        marginRight: 18,
+        marginTop: 14,
+        marginBottom: 26,
+        background: 'transparent',
+        style: { color: '#00ff99', fontFamily: 'IBM Plex Mono, monospace' },
+        x: { label: null, axis: null },
+        y: { label: null, grid: true, nice: true },
+        marks: [
+          Plot.barY(sectors, { x: 'sector', y: 'intensity', fill: 'rgba(0,255,153,.58)' }),
+          Plot.ruleY([0], { stroke: 'rgba(0,255,153,.15)' })
+        ]
+      }));
+
+      telemetryHost.append(title1, plot1, title2, plot2);
+      phase += 1;
+    }
+    renderPlots();
+    setInterval(renderPlots, 2200);
+
+    // Three.js core
+    const threeHost = document.getElementById('coreStage');
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
+    camera.position.set(0, 0, 6.2);
+
+    const renderer = new THREE.WebGLRenderer({
+      alpha: true,
+      antialias: !isMobile,
+      powerPreference: 'high-performance'
+    });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobile ? 1.15 : 1.6));
+    renderer.setClearColor(0x000000, 0);
+    threeHost.appendChild(renderer.domElement);
+
+    const group = new THREE.Group();
+    scene.add(group);
+
+    scene.add(new THREE.AmbientLight(0x99ffdd, 1.15));
+    const key = new THREE.DirectionalLight(0x00ff99, 1.8);
+    key.position.set(3, 4, 5);
+    scene.add(key);
+
+    const rim = new THREE.PointLight(0x52ddff, 1.6, 30);
+    rim.position.set(-4, -2, 5);
+    scene.add(rim);
+
+    const pulse = new THREE.PointLight(0xff4d8a, 0.9, 24);
+    pulse.position.set(0, 2.5, 4);
+    scene.add(pulse);
+
+    const coreGeo = new THREE.IcosahedronGeometry(1.2, 2);
+    const coreMat = new THREE.MeshStandardMaterial({
+      color: 0x06160f,
+      emissive: 0x00ff99,
+      emissiveIntensity: 0.8,
+      metalness: 0.25,
+      roughness: 0.22,
+      transparent: true,
+      opacity: 0.28
+    });
+
+    const coreMesh = new THREE.Mesh(coreGeo, coreMat);
+    group.add(coreMesh);
+
+    const wireMesh = new THREE.Mesh(
+      coreGeo,
+      new THREE.MeshBasicMaterial({
+        color: 0x00ff99,
+        wireframe: true,
+        transparent: true,
+        opacity: 0.24
+      })
+    );
+    group.add(wireMesh);
+
+    const ring1 = new THREE.Mesh(
+      new THREE.TorusGeometry(2.02, 0.036, 12, 280),
+      new THREE.MeshBasicMaterial({ color: 0x00ff99, transparent: true, opacity: 0.42 })
+    );
+    ring1.rotation.x = Math.PI / 2;
+    group.add(ring1);
+
+    const ring2 = new THREE.Mesh(
+      new THREE.TorusGeometry(2.42, 0.02, 10, 220),
+      new THREE.MeshBasicMaterial({ color: 0x52ddff, transparent: true, opacity: 0.22 })
+    );
+    ring2.rotation.y = Math.PI / 2;
+    group.add(ring2);
+
+    const halo = new THREE.Mesh(
+      new THREE.TorusGeometry(1.46, 0.016, 10, 220),
+      new THREE.MeshBasicMaterial({ color: 0xff4d8a, transparent: true, opacity: 0.18 })
+    );
+    halo.rotation.z = Math.PI / 3;
+    group.add(halo);
+
+    const knot = new THREE.Mesh(
+      new THREE.TorusKnotGeometry(1.36, 0.07, 220, 24),
+      new THREE.MeshBasicMaterial({ color: 0x00d98a, transparent: true, opacity: 0.28 })
+    );
+    group.add(knot);
+
+    const particleCount = reduceMotion ? 0 : (isMobile ? 120 : 220);
+    const particleGeo = new THREE.BufferGeometry();
+    const particlePos = new Float32Array(particleCount * 3);
+    for(let i=0;i<particleCount;i++){
+      const r = 3 + Math.random()*3.8;
+      const theta = Math.random()*Math.PI*2;
+      const phi = Math.acos(2*Math.random()-1);
+      particlePos[i*3+0] = r*Math.sin(phi)*Math.cos(theta);
+      particlePos[i*3+1] = r*Math.sin(phi)*Math.sin(theta);
+      particlePos[i*3+2] = r*Math.cos(phi);
+    }
+    particleGeo.setAttribute('position', new THREE.BufferAttribute(particlePos, 3));
+
+    const particleField = new THREE.Points(
+      particleGeo,
+      new THREE.PointsMaterial({
+        color: 0x00ff99,
+        size: isMobile ? 0.018 : 0.02,
+        transparent: true,
+        opacity: 0.78,
+        depthWrite: false
+      })
+    );
+    group.add(particleField);
+
+    const pointer = { x:0, y:0, active:false };
+    const target = { x:0, y:0 };
+
+    function resizeThree(){
+      const rect = threeHost.getBoundingClientRect();
+      const width = Math.max(1, rect.width);
+      const height = Math.max(1, rect.height);
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
+      renderer.setSize(width, height, false);
+    }
+    resizeThree();
+    window.addEventListener('resize', resizeThree);
+
+    window.addEventListener('pointermove', (e) => {
+      pointer.x = (e.clientX / window.innerWidth - 0.5) * 2;
+      pointer.y = (e.clientY / window.innerHeight - 0.5) * 2;
+      pointer.active = true;
+
+      if (!isMobile) {
+        const rx = (e.clientY / window.innerHeight - 0.5) * -0.55;
+        const ry = (e.clientX / window.innerWidth - 0.5) * 0.85;
+        shell.style.transform = `perspective(1400px) rotateX(${rx}deg) rotateY(${ry}deg)`;
+      }
+    });
+
+    window.addEventListener('pointerleave', () => {
+      pointer.active = false;
+      shell.style.transform = 'none';
+    });
+
+    function animateThree(){
+      if(!reduceMotion){
+        group.rotation.y += 0.0032;
+        group.rotation.x += 0.0011;
+
+        if(pointer.active){
+          target.x += (pointer.x * 0.18 - target.x) * 0.05;
+          target.y += (-pointer.y * 0.16 - target.y) * 0.05;
+        }else{
+          target.x *= 0.94;
+          target.y *= 0.94;
+        }
+
+        group.rotation.y += target.x * 0.0025;
+        group.rotation.x += target.y * 0.0025;
+
+        coreMesh.rotation.z += 0.0022;
+        wireMesh.rotation.z -= 0.0018;
+        ring1.rotation.z += 0.007;
+        ring2.rotation.x -= 0.005;
+        halo.rotation.y += 0.009;
+        knot.rotation.x += 0.004;
+        knot.rotation.y -= 0.003;
+      }
+
+      renderer.render(scene, camera);
+      requestAnimationFrame(animateThree);
+    }
+    animateThree();
+
+    // Background lattice
+    const bg = document.getElementById('bgCanvas');
+    const bctx = bg.getContext('2d', { alpha:true });
+    let bw = 0, bh = 0;
+    const bgParticles = [];
+    const bgCount = reduceMotion ? 0 : (isMobile ? 54 : 128);
+
+    function resizeBg(){
+      const dpr = Math.min(window.devicePixelRatio || 1, isMobile ? 1.2 : 1.6);
+      bw = bg.width = Math.floor(window.innerWidth * dpr);
+      bh = bg.height = Math.floor(window.innerHeight * dpr);
+      bg.style.width = window.innerWidth + 'px';
+      bg.style.height = window.innerHeight + 'px';
+      bctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    function initBgParticles(){
+      bgParticles.length = 0;
+      for(let i=0;i<bgCount;i++){
+        bgParticles.push({
+          x:Math.random()*window.innerWidth,
+          y:Math.random()*window.innerHeight,
+          vx:(Math.random()-.5)*(isMobile ? 0.22 : 0.34),
+          vy:(Math.random()-.5)*(isMobile ? 0.22 : 0.34),
+          r:Math.random()*(isMobile ? 1.2 : 1.8)+0.4
+        });
+      }
+    }
+
+    resizeBg();
+    initBgParticles();
+    window.addEventListener('resize', () => {
+      resizeBg();
+      initBgParticles();
+    });
+
+    const mouse = { x:0, y:0, active:false };
+    window.addEventListener('pointermove', (e) => {
+      mouse.x = e.clientX;
+      mouse.y = e.clientY;
+      mouse.active = true;
+    });
+    window.addEventListener('pointerleave', () => { mouse.active = false; });
+
+    function drawBg(){
+      bctx.clearRect(0,0,window.innerWidth,window.innerHeight);
+
+      if(!reduceMotion){
+        for(let i=0;i<bgParticles.length;i++){
+          const p = bgParticles[i];
+          p.x += p.vx;
+          p.y += p.vy;
+
+          if(p.x < -20) p.x = window.innerWidth + 20;
+          if(p.x > window.innerWidth + 20) p.x = -20;
+          if(p.y < -20) p.y = window.innerHeight + 20;
+          if(p.y > window.innerHeight + 20) p.y = -20;
+
+          const mdx = mouse.x - p.x;
+          const mdy = mouse.y - p.y;
+          const md = Math.hypot(mdx, mdy);
+          const nearMouse = mouse.active && md < 180;
+
+          for(let j=i+1;j<bgParticles.length;j++){
+            const q = bgParticles[j];
+            const dx = p.x - q.x;
+            const dy = p.y - q.y;
+            const d = Math.hypot(dx, dy);
+            if(d < (isMobile ? 90 : 140)){
+              bctx.beginPath();
+              bctx.moveTo(p.x, p.y);
+              bctx.lineTo(q.x, q.y);
+              bctx.strokeStyle = `rgba(0,255,153,${(1 - d / (isMobile ? 90 : 140)) * 0.08})`;
+              bctx.lineWidth = 1;
+              bctx.stroke();
+            }
+          }
+
+          bctx.beginPath();
+          bctx.arc(p.x, p.y, nearMouse ? p.r + 1.2 : p.r, 0, Math.PI*2);
+          bctx.fillStyle = nearMouse ? 'rgba(0,255,153,.72)' : 'rgba(0,255,153,.42)';
+          bctx.fill();
+        }
+      }
+
+      requestAnimationFrame(drawBg);
+    }
+    drawBg();
+
+    // Ambient audio
+    const audioToggle = document.createElement('button');
+    audioToggle.className = 'btn secondary';
+    audioToggle.textContent = 'Enable audio';
+    audioToggle.style.marginTop = '12px';
+    document.querySelector('.hero-actions').appendChild(audioToggle);
+
+    let audioCtx = null;
+    let audioNodes = null;
+    let audioOn = false;
+
+    function startAudio(){
+      if(audioOn) return;
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if(!AC) return;
+
+      audioCtx = audioCtx || new AC();
+      const master = audioCtx.createGain();
+      master.gain.value = 0.025;
+
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.value = 260;
+      filter.Q.value = 0.8;
+
+      const osc1 = audioCtx.createOscillator();
+      osc1.type = 'sine';
+      osc1.frequency.value = 42;
+
+      const osc2 = audioCtx.createOscillator();
+      osc2.type = 'triangle';
+      osc2.frequency.value = 78;
+
+      const lfo = audioCtx.createOscillator();
+      lfo.type = 'sine';
+      lfo.frequency.value = 0.12;
+
+      const lfoGain = audioCtx.createGain();
+      lfoGain.gain.value = 0.012;
+
+      lfo.connect(lfoGain);
+      lfoGain.connect(master.gain);
+
+      osc1.connect(filter);
+      osc2.connect(filter);
+      filter.connect(master);
+      master.connect(audioCtx.destination);
+
+      osc1.start();
+      osc2.start();
+      lfo.start();
+
+      audioNodes = { osc1, osc2, lfo, master };
+      audioOn = true;
+      audioToggle.textContent = 'Disable audio';
+    }
+
+    function stopAudio(){
+      if(!audioOn || !audioNodes) return;
+      const { osc1, osc2, lfo, master } = audioNodes;
+      try{ osc1.stop(); }catch(e){}
+      try{ osc2.stop(); }catch(e){}
+      try{ lfo.stop(); }catch(e){}
+      try{ master.disconnect(); }catch(e){}
+      audioNodes = null;
+      audioOn = false;
+      audioToggle.textContent = 'Enable audio';
+    }
+
+    audioToggle.addEventListener('click', async () => {
+      if(!audioOn){
+        startAudio();
+        if(audioCtx && audioCtx.state === 'suspended'){
+          try{ await audioCtx.resume(); }catch(e){}
+        }
+      }else{
+        stopAudio();
+      }
+    });
+  </script>
+</body>
+</html>
