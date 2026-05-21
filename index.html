@@ -1,1680 +1,1985 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="color-scheme" content="dark" />
-  <title>SERAPH // Defence Intelligence Interface</title>
-
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;700;800&family=IBM+Plex+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
-
-  <script src="https://cdn.jsdelivr.net/npm/three@0.184.0/build/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@observablehq/plot@0.6/dist/plot.umd.min.js"></script>
-
-  <style>
-    :root{
-      --bg:#010302;
-      --panel:rgba(6,12,9,.68);
-      --panel-strong:rgba(4,8,6,.9);
-      --glass:rgba(0,255,153,.05);
-      --line:rgba(0,255,153,.14);
-      --line-soft:rgba(0,255,153,.08);
-      --neon:#00ff99;
-      --cyan:#52ddff;
-      --pink:#ff4d8a;
-      --warn:#ffd24d;
-      --danger:#ff356b;
-      --text:#dcfff1;
-      --muted:#8bb9ab;
-      --shadow:0 0 40px rgba(0,255,153,.10);
-      --radius:22px;
-      --max:1600px;
-    }
-
-    *{box-sizing:border-box}
-    html,body{
-      width:100%;
-      min-height:100%;
-      margin:0;
-      background:
-        radial-gradient(circle at 50% 20%, rgba(0,255,153,.10), transparent 24%),
-        radial-gradient(circle at 80% 30%, rgba(82,221,255,.08), transparent 18%),
-        radial-gradient(circle at 15% 75%, rgba(255,77,138,.06), transparent 18%),
-        linear-gradient(180deg, #000 0%, var(--bg) 50%, #000 100%);
-      color:var(--text);
-      font-family:"IBM Plex Mono", monospace;
-      overflow-x:hidden;
-    }
-
-    body{
-      position:relative;
-      isolation:isolate;
-    }
-
-    body::before{
-      content:"";
-      position:fixed;
-      inset:0;
-      z-index:1;
-      pointer-events:none;
-      opacity:.28;
-      background:
-        linear-gradient(180deg, rgba(255,255,255,.014), transparent 18%, transparent 82%, rgba(255,255,255,.01)),
-        repeating-linear-gradient(to bottom, rgba(255,255,255,.02) 0 1px, transparent 2px 4px);
-      mix-blend-mode:screen;
-    }
-
-    #bgCanvas{
-      position:fixed;
-      inset:0;
-      width:100%;
-      height:100%;
-      z-index:0;
-      display:block;
-    }
-
-    .noise{
-      position:fixed;
-      inset:0;
-      z-index:2;
-      pointer-events:none;
-      opacity:.06;
-      background-image:
-        repeating-radial-gradient(circle at 50% 50%, rgba(255,255,255,.18) 0 1px, transparent 1px 4px);
-      animation:noiseShift .28s infinite steps(2,end);
-      mix-blend-mode:screen;
-    }
-
-    .scanbeam{
-      position:fixed;
-      left:0;
-      top:-20vh;
-      width:100%;
-      height:20vh;
-      z-index:2;
-      pointer-events:none;
-      background:linear-gradient(to bottom, transparent, rgba(0,255,153,.09), transparent);
-      filter:blur(1px);
-      animation:scanMove 7s linear infinite;
-      mix-blend-mode:screen;
-    }
-
-    @keyframes noiseShift{
-      0%{transform:translate3d(0,0,0)}
-      25%{transform:translate3d(-1px,1px,0)}
-      50%{transform:translate3d(1px,-1px,0)}
-      75%{transform:translate3d(1px,2px,0)}
-      100%{transform:translate3d(0,0,0)}
-    }
-
-    @keyframes scanMove{
-      from{transform:translateY(-20vh)}
-      to{transform:translateY(120vh)}
-    }
-
-    .wrap{
-      position:relative;
-      z-index:5;
-      width:100%;
-      min-height:100vh;
-      padding:20px;
-      display:flex;
-      justify-content:center;
-      align-items:center;
-    }
-
-    .shell{
-      width:min(var(--max), 100%);
-      min-height:min(96vh, 1280px);
-      border-radius:30px;
-      border:1px solid var(--line);
-      overflow:hidden;
-      position:relative;
-      background:
-        radial-gradient(circle at 50% 20%, rgba(0,255,153,.08), transparent 28%),
-        linear-gradient(180deg, rgba(0,255,153,.045), rgba(0,0,0,.88));
-      box-shadow:
-        0 0 0 1px rgba(255,255,255,.02) inset,
-        0 0 84px rgba(0,255,153,.08),
-        inset 0 0 120px rgba(0,255,153,.04);
-      backdrop-filter:blur(12px);
-      transform-style:preserve-3d;
-      transition:transform .12s ease-out;
-    }
-
-    .shell::before{
-      content:"";
-      position:absolute;
-      inset:0;
-      pointer-events:none;
-      background:
-        linear-gradient(135deg, rgba(0,255,153,.06), transparent 30%),
-        radial-gradient(circle at 50% 50%, transparent 43%, rgba(0,0,0,.58) 100%);
-      opacity:.95;
-    }
-
-    .topbar{
-      position:relative;
-      z-index:4;
-      display:flex;
-      justify-content:space-between;
-      align-items:flex-start;
-      gap:18px;
-      padding:26px 30px 20px;
-      border-bottom:1px solid rgba(0,255,153,.08);
-    }
-
-    .brand{
-      display:flex;
-      flex-direction:column;
-      gap:10px;
-      min-width:0;
-    }
-
-    .logo{
-      position:relative;
-      display:inline-block;
-      width:fit-content;
-      font-family:"Orbitron", sans-serif;
-      font-size:clamp(1.45rem, 2.5vw, 2.7rem);
-      font-weight:800;
-      letter-spacing:.42em;
-      line-height:1;
-      text-transform:uppercase;
-      color:var(--neon);
-      text-shadow:0 0 14px rgba(0,255,153,.65), 0 0 36px rgba(0,255,153,.20);
-    }
-
-    .logo::before,
-    .logo::after{
-      content:attr(data-text);
-      position:absolute;
-      inset:0;
-      opacity:.45;
-      pointer-events:none;
-    }
-
-    .logo::before{
-      color:var(--pink);
-      transform:translate(-1px,0);
-      clip-path:inset(0 0 54% 0);
-    }
-
-    .logo::after{
-      color:var(--cyan);
-      transform:translate(1px,0);
-      clip-path:inset(46% 0 0 0);
-    }
-
-    .tagline{
-      max-width:78ch;
-      font-size:.8rem;
-      line-height:1.65;
-      letter-spacing:.34em;
-      text-transform:uppercase;
-      color:var(--muted);
-    }
-
-    .status{
-      display:flex;
-      flex-direction:column;
-      gap:10px;
-      align-items:flex-end;
-      text-align:right;
-      min-width:260px;
-    }
-
-    .status-pill{
-      padding:10px 14px;
-      border-radius:999px;
-      border:1px solid rgba(0,255,153,.18);
-      background:rgba(0,255,153,.05);
-      color:var(--neon);
-      font-size:.76rem;
-      letter-spacing:.24em;
-      text-transform:uppercase;
-      white-space:nowrap;
-      box-shadow:0 0 16px rgba(0,255,153,.08);
-    }
-
-    .clockline{
-      font-size:.78rem;
-      color:var(--muted);
-      letter-spacing:.18em;
-      text-transform:uppercase;
-      white-space:nowrap;
-    }
-
-    .layout{
-      position:relative;
-      z-index:4;
-      display:grid;
-      grid-template-columns:260px minmax(0,1fr) 360px;
-      gap:18px;
-      padding:18px 18px 20px;
-      align-items:stretch;
-    }
-
-    .rail,
-    .main,
-    .side{
-      min-height:0;
-    }
-
-    .rail{
-      display:flex;
-      flex-direction:column;
-      gap:14px;
-    }
-
-    .tile,
-    .card{
-      position:relative;
-      overflow:hidden;
-      border-radius:var(--radius);
-      background:var(--panel);
-      border:1px solid var(--line);
-      box-shadow:var(--shadow);
-      backdrop-filter:blur(8px);
-    }
-
-    .tile::before,
-    .card::before,
-    .panel::before{
-      content:"";
-      position:absolute;
-      inset:0;
-      pointer-events:none;
-      background:
-        linear-gradient(135deg, rgba(255,255,255,.05), transparent 28%),
-        radial-gradient(circle at 50% 0%, rgba(0,255,153,.08), transparent 42%);
-      opacity:.6;
-    }
-
-    .tile-inner,
-    .card-inner,
-    .panel-inner{
-      position:relative;
-      z-index:1;
-      padding:18px;
-    }
-
-    .rail-heading{
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      gap:12px;
-      font-family:"Orbitron", sans-serif;
-      color:var(--neon);
-      text-transform:uppercase;
-      letter-spacing:.22em;
-      font-size:.74rem;
-      margin-bottom:14px;
-    }
-
-    .rail-list{
-      display:grid;
-      gap:10px;
-    }
-
-    .rail-item{
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      gap:16px;
-      padding:12px 14px;
-      border-radius:14px;
-      background:rgba(0,255,153,.04);
-      border:1px solid rgba(0,255,153,.08);
-      font-size:.9rem;
-    }
-
-    .rail-item span:last-child{ color:var(--neon); }
-    .rail-item .warn{ color:var(--warn); }
-    .rail-item .danger{ color:var(--danger); }
-
-    .mini-grid{
-      display:grid;
-      grid-template-columns:repeat(2, minmax(0,1fr));
-      gap:12px;
-      margin-top:14px;
-    }
-
-    .mini{
-      padding:14px;
-      border-radius:16px;
-      border:1px solid rgba(0,255,153,.08);
-      background:rgba(0,0,0,.14);
-      min-height:92px;
-    }
-
-    .mini label{
-      display:block;
-      margin-bottom:10px;
-      font-size:.66rem;
-      letter-spacing:.28em;
-      text-transform:uppercase;
-      color:var(--muted);
-    }
-
-    .mini strong{
-      font-family:"Orbitron", sans-serif;
-      font-size:1.08rem;
-      color:var(--neon);
-      text-shadow:0 0 14px rgba(0,255,153,.24);
-    }
-
-    .main{
-      display:grid;
-      grid-template-rows:auto auto 1fr;
-      gap:18px;
-      min-width:0;
-    }
-
-    .hero{
-      position:relative;
-      overflow:hidden;
-      border-radius:30px;
-      border:1px solid var(--line);
-      background:
-        radial-gradient(circle at 50% 35%, rgba(0,255,153,.14), transparent 24%),
-        radial-gradient(circle at 20% 20%, rgba(82,221,255,.10), transparent 18%),
-        radial-gradient(circle at 80% 30%, rgba(255,77,138,.06), transparent 16%),
-        linear-gradient(180deg, rgba(0,0,0,.1), rgba(0,0,0,.35));
-      box-shadow:var(--shadow);
-      min-height:500px;
-    }
-
-    .hero::before{
-      content:"";
-      position:absolute;
-      inset:0;
-      pointer-events:none;
-      background:
-        linear-gradient(180deg, transparent, rgba(0,255,153,.05), transparent),
-        repeating-linear-gradient(to bottom, rgba(255,255,255,.015) 0 1px, transparent 2px 6px);
-      opacity:.75;
-    }
-
-    .hero-inner{
-      position:relative;
-      z-index:1;
-      display:grid;
-      grid-template-columns:minmax(0,1.2fr) minmax(320px,.8fr);
-      gap:18px;
-      padding:24px;
-      align-items:stretch;
-    }
-
-    .hero-copy{
-      display:flex;
-      flex-direction:column;
-      justify-content:center;
-      gap:18px;
-      padding:10px 0;
-      min-width:0;
-    }
-
-    .eyebrow{
-      display:inline-flex;
-      align-items:center;
-      gap:10px;
-      width:fit-content;
-      padding:9px 14px;
-      border:1px solid rgba(0,255,153,.16);
-      border-radius:999px;
-      background:rgba(0,255,153,.05);
-      color:var(--neon);
-      font-size:.74rem;
-      letter-spacing:.28em;
-      text-transform:uppercase;
-    }
-
-    .eyebrow::before{
-      content:"";
-      width:8px;
-      height:8px;
-      border-radius:50%;
-      background:var(--neon);
-      box-shadow:0 0 12px var(--neon);
-    }
-
-    .hero h1{
-      margin:0;
-      font-family:"Orbitron", sans-serif;
-      font-size:clamp(2.8rem, 5.8vw, 6.6rem);
-      line-height:.9;
-      letter-spacing:.08em;
-      text-transform:uppercase;
-      color:#f5fff9;
-      text-shadow:0 0 16px rgba(0,255,153,.18), 0 0 34px rgba(0,255,153,.10);
-    }
-
-    .hero h1 span{
-      display:block;
-      color:var(--neon);
-      text-shadow:0 0 22px rgba(0,255,153,.52), 0 0 42px rgba(0,255,153,.18);
-    }
-
-    .hero p{
-      margin:0;
-      max-width:72ch;
-      font-size:clamp(.95rem, 1.05vw, 1.06rem);
-      line-height:1.9;
-      color:#cdeede;
-    }
-
-    .hero-actions{
-      display:flex;
-      flex-wrap:wrap;
-      gap:14px;
-      margin-top:4px;
-    }
-
-    .btn{
-      appearance:none;
-      border:none;
-      cursor:pointer;
-      padding:14px 18px;
-      border-radius:14px;
-      font-family:"Orbitron", sans-serif;
-      text-transform:uppercase;
-      letter-spacing:.22em;
-      font-size:.75rem;
-      color:#01120b;
-      background:linear-gradient(180deg, rgba(0,255,153,1), rgba(0,220,132,1));
-      box-shadow:0 0 18px rgba(0,255,153,.22);
-      transition:transform .18s ease, box-shadow .18s ease, filter .18s ease;
-    }
-
-    .btn:hover{
-      transform:translateY(-1px);
-      box-shadow:0 0 26px rgba(0,255,153,.32);
-      filter:saturate(1.1);
-    }
-
-    .btn.secondary{
-      color:var(--text);
-      background:rgba(0,255,153,.05);
-      border:1px solid rgba(0,255,153,.16);
-      box-shadow:none;
-    }
-
-    .btn.secondary:hover{
-      background:rgba(0,255,153,.08);
-    }
-
-    .hero-right{
-      display:grid;
-      gap:14px;
-      align-content:start;
-    }
-
-    .stat-grid{
-      display:grid;
-      grid-template-columns:repeat(2, minmax(0,1fr));
-      gap:12px;
-    }
-
-    .stat{
-      padding:14px;
-      border-radius:16px;
-      background:rgba(0,0,0,.16);
-      border:1px solid rgba(0,255,153,.08);
-      position:relative;
-      overflow:hidden;
-    }
-
-    .stat::after{
-      content:"";
-      position:absolute;
-      width:130px;
-      height:130px;
-      right:-48px;
-      bottom:-48px;
-      border-radius:50%;
-      background:radial-gradient(circle, rgba(0,255,153,.14), transparent 68%);
-      pointer-events:none;
-    }
-
-    .stat label{
-      display:block;
-      margin-bottom:12px;
-      font-size:.66rem;
-      letter-spacing:.28em;
-      text-transform:uppercase;
-      color:var(--muted);
-    }
-
-    .stat strong{
-      display:block;
-      font-family:"Orbitron", sans-serif;
-      font-size:1.16rem;
-      letter-spacing:.08em;
-      color:var(--neon);
-    }
-
-    .core-shell{
-      position:relative;
-      min-height:260px;
-      border-radius:28px;
-      border:1px solid rgba(0,255,153,.11);
-      background:
-        radial-gradient(circle at 50% 45%, rgba(0,255,153,.16), transparent 22%),
-        radial-gradient(circle at 50% 50%, rgba(82,221,255,.06), transparent 34%),
-        linear-gradient(180deg, rgba(0,0,0,.12), rgba(0,0,0,.28));
-      overflow:hidden;
-    }
-
-    .core-shell::before{
-      content:"";
-      position:absolute;
-      inset:0;
-      background:
-        repeating-linear-gradient(to bottom, rgba(255,255,255,.015) 0 1px, transparent 2px 5px),
-        linear-gradient(90deg, transparent, rgba(0,255,153,.08), transparent);
-      opacity:.7;
-      pointer-events:none;
-    }
-
-    #coreStage{
-      position:absolute;
-      inset:0;
-    }
-
-    .core-label{
-      position:absolute;
-      left:18px;
-      right:18px;
-      bottom:18px;
-      z-index:2;
-      display:flex;
-      justify-content:space-between;
-      gap:14px;
-      align-items:flex-end;
-      pointer-events:none;
-      font-size:.72rem;
-      letter-spacing:.18em;
-      text-transform:uppercase;
-      color:var(--muted);
-      line-height:1.5;
-    }
-
-    .core-label .right{
-      text-align:right;
-    }
-
-    .toolbar{
-      display:flex;
-      justify-content:space-between;
-      gap:16px;
-      align-items:center;
-      padding:0 2px;
-    }
-
-    .toolbar-left{
-      display:flex;
-      gap:10px;
-      flex-wrap:wrap;
-    }
-
-    .chip{
-      padding:9px 12px;
-      border-radius:999px;
-      border:1px solid rgba(0,255,153,.16);
-      background:rgba(0,255,153,.05);
-      color:var(--neon);
-      font-size:.7rem;
-      letter-spacing:.22em;
-      text-transform:uppercase;
-      white-space:nowrap;
-    }
-
-    .toolbar-right{
-      font-size:.72rem;
-      letter-spacing:.2em;
-      text-transform:uppercase;
-      color:var(--muted);
-    }
-
-    .bottom{
-      display:grid;
-      grid-template-columns:1.15fr .85fr;
-      gap:18px;
-      min-width:0;
-    }
-
-    .panel{
-      position:relative;
-      overflow:hidden;
-      border-radius:28px;
-      border:1px solid var(--line);
-      background:var(--panel-strong);
-      box-shadow:var(--shadow);
-      backdrop-filter:blur(8px);
-      min-width:0;
-    }
-
-    .panel-inner{
-      position:relative;
-      z-index:1;
-      padding:18px;
-    }
-
-    .panel-head{
-      display:flex;
-      justify-content:space-between;
-      gap:12px;
-      align-items:center;
-      padding-bottom:14px;
-      margin-bottom:14px;
-      border-bottom:1px solid rgba(0,255,153,.08);
-      font-family:"Orbitron", sans-serif;
-      text-transform:uppercase;
-      letter-spacing:.24em;
-      color:var(--neon);
-      font-size:.74rem;
-    }
-
-    .panel-head .sub{
-      color:var(--muted);
-      font-size:.7rem;
-    }
-
-    .terminal{
-      height:330px;
-      overflow:auto;
-      scrollbar-width:thin;
-      scrollbar-color: rgba(0,255,153,.28) transparent;
-      color:#b9ffd9;
-      line-height:1.72;
-      font-size:.9rem;
-    }
-
-    .terminal::-webkit-scrollbar{width:8px}
-    .terminal::-webkit-scrollbar-thumb{
-      background:rgba(0,255,153,.26);
-      border-radius:999px;
-    }
-
-    .terminal-line{
-      white-space:pre-wrap;
-    }
-
-    .cursor{
-      display:inline-block;
-      width:9px;
-      height:16px;
-      background:var(--neon);
-      margin-left:2px;
-      vertical-align:middle;
-      animation:blink 1s steps(1,end) infinite;
-    }
-
-    @keyframes blink{50%{opacity:0}}
-
-    .chart-box{
-      display:grid;
-      gap:14px;
-    }
-
-    .plot{
-      min-height:180px;
-      border-radius:18px;
-      overflow:hidden;
-      border:1px solid rgba(0,255,153,.08);
-      background:rgba(0,0,0,.12);
-    }
-
-    .status-stack{
-      display:grid;
-      gap:12px;
-    }
-
-    .status-row{
-      display:flex;
-      justify-content:space-between;
-      gap:14px;
-      align-items:center;
-      padding:12px 14px;
-      border-radius:14px;
-      border:1px solid rgba(0,255,153,.08);
-      background:rgba(0,255,153,.04);
-      font-size:.9rem;
-    }
-
-    .status-row span:last-child{ color:var(--neon); }
-    .status-row .warn{ color:var(--warn); }
-    .status-row .danger{ color:var(--danger); }
-
-    .map{
-      position:relative;
-      aspect-ratio:16/10;
-      border-radius:22px;
-      border:1px solid rgba(0,255,153,.12);
-      overflow:hidden;
-      background:
-        radial-gradient(circle at 50% 50%, rgba(0,255,153,.10), transparent 42%),
-        radial-gradient(circle at 50% 50%, rgba(82,221,255,.05), transparent 58%),
-        linear-gradient(180deg, rgba(0,0,0,.12), rgba(0,0,0,.36));
-    }
-
-    .map svg{
-      position:absolute;
-      inset:0;
-      width:100%;
-      height:100%;
-    }
-
-    .map .gridline{
-      stroke:rgba(0,255,153,.08);
-      stroke-width:1;
-      stroke-dasharray:4 7;
-    }
-
-    .map .route{
-      fill:none;
-      stroke:rgba(0,255,153,.55);
-      stroke-width:1.8;
-      stroke-dasharray:10 9;
-      animation:dash 3.6s linear infinite;
-    }
-
-    .map .node{
-      fill:#00ff99;
-      filter:drop-shadow(0 0 8px rgba(0,255,153,.8));
-      animation:pulseNode 2.6s infinite ease-in-out;
-    }
-
-    .map .node.delay{ animation-delay:1s; }
-    .map .node.blue{
-      fill:#52ddff;
-      filter:drop-shadow(0 0 8px rgba(82,221,255,.8));
-    }
-    .map .node.red{
-      fill:#ff4d8a;
-      filter:drop-shadow(0 0 8px rgba(255,77,138,.8));
-    }
-
-    @keyframes dash{to{stroke-dashoffset:-120}}
-    @keyframes pulseNode{
-      0%,100%{opacity:.52;transform:scale(.92)}
-      50%{opacity:1;transform:scale(1.1)}
-    }
-
-    .map-caption{
-      display:flex;
-      justify-content:space-between;
-      gap:14px;
-      align-items:center;
-      font-size:.78rem;
-      letter-spacing:.2em;
-      text-transform:uppercase;
-      color:var(--muted);
-    }
-
-    .ticker{
-      display:flex;
-      gap:18px;
-      overflow:hidden;
-      white-space:nowrap;
-      border-top:1px solid rgba(0,255,153,.08);
-      background:rgba(0,0,0,.2);
-    }
-
-    .ticker-inner{
-      display:inline-flex;
-      gap:28px;
-      padding:12px 16px;
-      animation:marquee 24s linear infinite;
-      color:var(--muted);
-      letter-spacing:.22em;
-      text-transform:uppercase;
-      font-size:.72rem;
-    }
-
-    .ticker strong{
-      color:var(--neon);
-      font-weight:600;
-    }
-
-    @keyframes marquee{
-      from{transform:translateX(0)}
-      to{transform:translateX(-50%)}
-    }
-
-    .footer{
-      display:flex;
-      justify-content:space-between;
-      gap:16px;
-      align-items:center;
-      padding:0 4px;
-      color:var(--muted);
-      font-size:.72rem;
-      letter-spacing:.24em;
-      text-transform:uppercase;
-    }
-
-    .footer strong{ color:var(--neon); font-weight:600; }
-
-    @media (max-width: 1280px){
-      .layout{
-        grid-template-columns:1fr;
-      }
-      .rail{
-        order:2;
-      }
-      .main{
-        order:1;
-      }
-      .side{
-        order:3;
-      }
-      .hero-inner{
-        grid-template-columns:1fr;
-      }
-      .bottom{
-        grid-template-columns:1fr;
-      }
-      .shell{
-        min-height:auto;
-      }
-    }
-
-    @media (max-width: 760px){
-      .wrap{padding:0}
-      .shell{
-        min-height:100vh;
-        border:none;
-        border-radius:0;
-      }
-      .topbar{
-        padding:18px 16px 16px;
-        flex-direction:column;
-        align-items:flex-start;
-      }
-      .status{
-        align-items:flex-start;
-        text-align:left;
-        min-width:0;
-      }
-      .layout{
-        padding:16px;
-        gap:14px;
-      }
-      .hero-inner{
-        padding:16px;
-      }
-      .footer{
-        padding:0 2px 16px;
-        flex-direction:column;
-        align-items:flex-start;
-      }
-      .stat-grid{
-        grid-template-columns:1fr;
-      }
-      .mini-grid{
-        grid-template-columns:1fr;
-      }
-      .core-shell{
-        min-height:240px;
-      }
-      .terminal{
-        height:220px;
-      }
-      .ticker-inner{
-        animation-duration:20s;
-      }
-    }
-
-    @media (prefers-reduced-motion: reduce){
-      *,*::before,*::after{
-        animation-duration:.001ms !important;
-        animation-iteration-count:1 !important;
-        transition:none !important;
-        scroll-behavior:auto !important;
-      }
-      .noise,.scanbeam{display:none}
-    }
-  </style>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="color-scheme" content="dark"/>
+<title>SERAPH // Sovereign Cyber Intelligence</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@300;400;500;600;700&family=Bebas+Neue&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap" rel="stylesheet">
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.184.0/build/three.min.js"></script>
+
+<style>
+:root{
+  --bg:#000;
+  --bg1:#030a06;
+  --bg2:#010f08;
+  --neon:#00ff88;
+  --neon2:#00e87a;
+  --neon-dim:rgba(0,255,136,.12);
+  --neon-glow:rgba(0,255,136,.35);
+  --cyan:#17f3e8;
+  --cyan-dim:rgba(23,243,232,.1);
+  --red:#ff2d5b;
+  --red-dim:rgba(255,45,91,.1);
+  --amber:#ffaa00;
+  --amber-dim:rgba(255,170,0,.1);
+  --white:#e8fff4;
+  --muted:#4a7a66;
+  --muted2:#2a4a3a;
+  --glass:rgba(0,20,12,.72);
+  --glass2:rgba(0,10,6,.85);
+  --border:rgba(0,255,136,.1);
+  --border-bright:rgba(0,255,136,.28);
+  --font-mono:"JetBrains Mono",monospace;
+  --font-tech:"Share Tech Mono",monospace;
+  --font-display:"Bebas Neue",sans-serif;
+  --font-body:"Rajdhani",sans-serif;
+  --r:2px;
+  --r2:6px;
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+html{scroll-behavior:smooth}
+
+body{
+  background:var(--bg);
+  color:var(--white);
+  font-family:var(--font-body);
+  overflow-x:hidden;
+  min-height:100vh;
+  cursor:none;
+}
+
+/* CUSTOM CURSOR */
+#cursor{
+  position:fixed;
+  width:18px;height:18px;
+  border:1.5px solid var(--neon);
+  border-radius:50%;
+  pointer-events:none;
+  z-index:9999;
+  transform:translate(-50%,-50%);
+  transition:width .18s,height .18s,background .18s,border-color .18s;
+  mix-blend-mode:screen;
+}
+#cursor-dot{
+  position:fixed;
+  width:4px;height:4px;
+  background:var(--neon);
+  border-radius:50%;
+  pointer-events:none;
+  z-index:9999;
+  transform:translate(-50%,-50%);
+  box-shadow:0 0 8px var(--neon);
+}
+body:has(a:hover) #cursor,
+body:has(button:hover) #cursor{
+  width:36px;height:36px;
+  background:rgba(0,255,136,.06);
+  border-color:var(--cyan);
+}
+
+/* BACKGROUND LAYERS */
+#hex-canvas,#matrix-canvas,#radar-canvas{
+  position:fixed;inset:0;
+  pointer-events:none;
+  z-index:0;
+}
+#hex-canvas{opacity:.18}
+#matrix-canvas{opacity:.06;z-index:1}
+#radar-canvas{z-index:2;opacity:.22}
+
+.scanline-overlay{
+  position:fixed;inset:0;
+  background:repeating-linear-gradient(
+    0deg,
+    transparent,transparent 2px,
+    rgba(0,255,136,.015) 2px,rgba(0,255,136,.015) 4px
+  );
+  pointer-events:none;z-index:3;
+  animation:scanRoll 8s linear infinite;
+}
+@keyframes scanRoll{
+  from{background-position:0 0}
+  to{background-position:0 200px}
+}
+
+.vignette{
+  position:fixed;inset:0;
+  background:radial-gradient(ellipse at 50% 50%,transparent 42%,rgba(0,0,0,.84) 100%);
+  pointer-events:none;z-index:4;
+}
+
+/* MAIN LAYOUT */
+.site{
+  position:relative;z-index:5;
+  display:flex;flex-direction:column;
+  min-height:100vh;
+}
+
+/* ─── NAV ─── */
+nav{
+  position:fixed;top:0;left:0;right:0;
+  z-index:200;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:18px 48px;
+  background:linear-gradient(180deg,rgba(0,5,3,.92) 0%,transparent 100%);
+  border-bottom:1px solid rgba(0,255,136,.06);
+  backdrop-filter:blur(6px);
+}
+
+.nav-logo{
+  font-family:var(--font-display);
+  font-size:2rem;
+  letter-spacing:.28em;
+  color:var(--neon);
+  text-shadow:0 0 24px var(--neon-glow),0 0 60px rgba(0,255,136,.12);
+  text-decoration:none;
+  position:relative;
+}
+.nav-logo::after{
+  content:"v4.1.0";
+  position:absolute;
+  right:-44px;top:4px;
+  font-family:var(--font-mono);
+  font-size:.48rem;
+  color:var(--muted);
+  letter-spacing:.12em;
+}
+
+.nav-links{
+  display:flex;align-items:center;gap:36px;
+  list-style:none;
+}
+.nav-links a{
+  font-family:var(--font-tech);
+  font-size:.78rem;
+  letter-spacing:.24em;
+  text-transform:uppercase;
+  color:var(--muted);
+  text-decoration:none;
+  transition:color .2s,text-shadow .2s;
+  position:relative;
+}
+.nav-links a::before{
+  content:"";
+  position:absolute;
+  bottom:-4px;left:0;right:0;
+  height:1px;
+  background:var(--neon);
+  transform:scaleX(0);
+  transform-origin:left;
+  transition:transform .24s;
+}
+.nav-links a:hover{color:var(--neon);text-shadow:0 0 16px var(--neon-glow)}
+.nav-links a:hover::before{transform:scaleX(1)}
+
+.nav-status{
+  display:flex;align-items:center;gap:12px;
+  font-family:var(--font-tech);
+  font-size:.72rem;
+  letter-spacing:.18em;
+  color:var(--muted);
+}
+.status-dot{
+  width:8px;height:8px;
+  border-radius:50%;
+  background:var(--neon);
+  box-shadow:0 0 10px var(--neon);
+  animation:dotPulse 2.4s ease-in-out infinite;
+}
+@keyframes dotPulse{
+  0%,100%{opacity:1;box-shadow:0 0 10px var(--neon)}
+  50%{opacity:.4;box-shadow:0 0 4px var(--neon)}
+}
+
+/* ─── HERO ─── */
+.hero{
+  min-height:100vh;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  position:relative;
+  overflow:hidden;
+}
+
+.hero-left{
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  padding:140px 48px 80px 64px;
+  position:relative;
+  z-index:10;
+}
+
+.hero-eyebrow{
+  display:inline-flex;align-items:center;gap:14px;
+  margin-bottom:28px;
+  font-family:var(--font-tech);
+  font-size:.72rem;
+  letter-spacing:.38em;
+  text-transform:uppercase;
+  color:var(--neon);
+}
+.hero-eyebrow::before{
+  content:"";
+  width:40px;height:1px;
+  background:linear-gradient(90deg,transparent,var(--neon));
+}
+.hero-eyebrow::after{
+  content:"";
+  width:40px;height:1px;
+  background:linear-gradient(270deg,transparent,var(--neon));
+}
+
+.hero-title{
+  font-family:var(--font-display);
+  font-size:clamp(5rem,9vw,11rem);
+  line-height:.88;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+  color:var(--white);
+  margin-bottom:8px;
+}
+.hero-title .line-accent{
+  display:block;
+  color:transparent;
+  -webkit-text-stroke:1px rgba(0,255,136,.5);
+  position:relative;
+}
+.hero-title .line-neon{
+  display:block;
+  color:var(--neon);
+  text-shadow:0 0 40px rgba(0,255,136,.4),0 0 80px rgba(0,255,136,.15);
+  position:relative;
+}
+
+.hero-sub{
+  font-family:var(--font-body);
+  font-size:1.1rem;
+  font-weight:300;
+  line-height:1.85;
+  color:rgba(232,255,244,.55);
+  max-width:60ch;
+  margin:28px 0 44px;
+  letter-spacing:.04em;
+}
+.hero-sub strong{
+  color:var(--neon);
+  font-weight:600;
+}
+
+.hero-cta{
+  display:flex;gap:16px;align-items:center;flex-wrap:wrap;
+}
+
+.btn-primary{
+  font-family:var(--font-tech);
+  font-size:.78rem;
+  letter-spacing:.3em;
+  text-transform:uppercase;
+  color:#000;
+  background:var(--neon);
+  border:none;
+  padding:16px 32px;
+  cursor:none;
+  position:relative;
+  overflow:hidden;
+  clip-path:polygon(0 0,calc(100% - 10px) 0,100% 10px,100% 100%,10px 100%,0 calc(100% - 10px));
+  transition:filter .2s,box-shadow .2s;
+  text-decoration:none;
+  display:inline-block;
+}
+.btn-primary::before{
+  content:"";
+  position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.22),transparent);
+  transform:translateX(-100%);
+  transition:transform .42s;
+}
+.btn-primary:hover{
+  filter:brightness(1.12);
+  box-shadow:0 0 36px rgba(0,255,136,.42);
+}
+.btn-primary:hover::before{transform:translateX(100%)}
+
+.btn-ghost{
+  font-family:var(--font-tech);
+  font-size:.78rem;
+  letter-spacing:.3em;
+  text-transform:uppercase;
+  color:var(--neon);
+  background:transparent;
+  border:1px solid rgba(0,255,136,.24);
+  padding:15px 32px;
+  cursor:none;
+  clip-path:polygon(0 0,calc(100% - 10px) 0,100% 10px,100% 100%,10px 100%,0 calc(100% - 10px));
+  transition:background .2s,border-color .2s,box-shadow .2s;
+  text-decoration:none;
+  display:inline-block;
+}
+.btn-ghost:hover{
+  background:rgba(0,255,136,.06);
+  border-color:rgba(0,255,136,.48);
+  box-shadow:0 0 24px rgba(0,255,136,.14);
+}
+
+.hero-metrics{
+  display:flex;gap:36px;
+  margin-top:56px;
+  padding-top:36px;
+  border-top:1px solid var(--border);
+}
+.metric{
+  display:flex;flex-direction:column;gap:6px;
+}
+.metric-val{
+  font-family:var(--font-display);
+  font-size:2.4rem;
+  letter-spacing:.08em;
+  color:var(--neon);
+  text-shadow:0 0 20px rgba(0,255,136,.35);
+  line-height:1;
+}
+.metric-label{
+  font-family:var(--font-tech);
+  font-size:.64rem;
+  letter-spacing:.32em;
+  text-transform:uppercase;
+  color:var(--muted);
+}
+
+/* HERO RIGHT — GLASSMORPH PANEL + 3D */
+.hero-right{
+  position:relative;
+  z-index:10;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  padding:120px 48px 80px 0;
+  gap:18px;
+}
+
+.threat-orb-wrap{
+  position:relative;
+  width:340px;height:340px;
+  flex-shrink:0;
+}
+
+#three-canvas{
+  position:absolute;inset:0;
+  width:100%!important;height:100%!important;
+}
+
+.orb-rings{
+  position:absolute;inset:0;
+  pointer-events:none;
+}
+.orb-ring{
+  position:absolute;
+  border-radius:50%;
+  border:1px solid;
+  top:50%;left:50%;
+  transform:translate(-50%,-50%);
+  animation:ringPulse 3.6s ease-in-out infinite;
+}
+.orb-ring:nth-child(1){
+  width:360px;height:360px;
+  border-color:rgba(0,255,136,.12);
+  animation-delay:0s;
+}
+.orb-ring:nth-child(2){
+  width:420px;height:420px;
+  border-color:rgba(23,243,232,.07);
+  animation-delay:.8s;
+}
+.orb-ring:nth-child(3){
+  width:490px;height:490px;
+  border-color:rgba(0,255,136,.04);
+  animation-delay:1.6s;
+}
+@keyframes ringPulse{
+  0%,100%{opacity:.6;transform:translate(-50%,-50%) scale(1)}
+  50%{opacity:.15;transform:translate(-50%,-50%) scale(1.05)}
+}
+
+.threat-label{
+  font-family:var(--font-tech);
+  font-size:.66rem;
+  letter-spacing:.28em;
+  text-transform:uppercase;
+  color:var(--muted);
+  text-align:center;
+}
+
+/* GLASS CARDS */
+.glass-card{
+  background:var(--glass);
+  border:1px solid var(--border);
+  backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);
+  padding:20px 24px;
+  position:relative;
+  overflow:hidden;
+  width:100%;
+  max-width:360px;
+}
+.glass-card::before{
+  content:"";
+  position:absolute;
+  top:0;left:0;right:0;
+  height:1px;
+  background:linear-gradient(90deg,transparent,var(--neon),transparent);
+  opacity:.35;
+}
+.glass-card-title{
+  font-family:var(--font-tech);
+  font-size:.68rem;
+  letter-spacing:.3em;
+  text-transform:uppercase;
+  color:var(--muted);
+  margin-bottom:14px;
+}
+
+/* TERMINAL CARD */
+.terminal-card{
+  font-family:var(--font-mono);
+  font-size:.78rem;
+  line-height:1.7;
+  color:#5aff9e;
+  max-height:110px;
+  overflow:hidden;
+}
+.term-line{color:#2a6a48}
+.term-line.active{color:#5aff9e}
+.term-line.warn{color:var(--amber)}
+.term-line.err{color:var(--red)}
+.term-cursor{
+  display:inline-block;
+  width:7px;height:13px;
+  background:#5aff9e;
+  vertical-align:middle;
+  animation:termBlink .9s steps(1) infinite;
+}
+@keyframes termBlink{50%{opacity:0}}
+
+/* LIVE ALERTS */
+.alert-list{display:grid;gap:8px}
+.alert-item{
+  display:flex;align-items:center;gap:12px;
+  padding:10px 12px;
+  background:rgba(0,0,0,.3);
+  border:1px solid rgba(255,255,255,.04);
+  border-left:2px solid;
+  font-family:var(--font-tech);
+  font-size:.72rem;
+  letter-spacing:.12em;
+}
+.alert-item.ok{border-left-color:var(--neon)}
+.alert-item.warn{border-left-color:var(--amber)}
+.alert-item.crit{border-left-color:var(--red)}
+.alert-dot{
+  width:6px;height:6px;border-radius:50%;
+  flex-shrink:0;
+}
+.alert-item.ok .alert-dot{background:var(--neon);box-shadow:0 0 8px var(--neon)}
+.alert-item.warn .alert-dot{background:var(--amber);box-shadow:0 0 8px var(--amber)}
+.alert-item.crit .alert-dot{
+  background:var(--red);
+  box-shadow:0 0 8px var(--red);
+  animation:critPulse 1s ease-in-out infinite;
+}
+@keyframes critPulse{50%{opacity:.3}}
+.alert-text{flex:1;color:var(--white)}
+.alert-time{color:var(--muted);flex-shrink:0}
+
+/* ─── DIAGONAL DIVIDER ─── */
+.divider-diag{
+  width:100%;
+  height:80px;
+  background:linear-gradient(170deg,transparent 49.8%,rgba(0,255,136,.03) 50%);
+  position:relative;
+  z-index:5;
+}
+.divider-line{
+  height:1px;
+  background:linear-gradient(90deg,transparent,var(--neon-glow),transparent);
+  margin:0 auto;
+  width:80%;
+}
+
+/* ─── FEATURES SECTION ─── */
+.features{
+  position:relative;z-index:5;
+  padding:80px 64px 100px;
+}
+
+.section-header{
+  text-align:center;
+  margin-bottom:72px;
+}
+.section-eyebrow{
+  font-family:var(--font-tech);
+  font-size:.72rem;
+  letter-spacing:.42em;
+  text-transform:uppercase;
+  color:var(--neon);
+  margin-bottom:16px;
+}
+.section-title{
+  font-family:var(--font-display);
+  font-size:clamp(3rem,6vw,6.5rem);
+  letter-spacing:.1em;
+  color:var(--white);
+  line-height:.9;
+}
+.section-title span{
+  color:transparent;
+  -webkit-text-stroke:1px rgba(0,255,136,.4);
+}
+.section-sub{
+  margin-top:18px;
+  font-size:1rem;
+  font-weight:300;
+  color:rgba(232,255,244,.45);
+  letter-spacing:.06em;
+  max-width:60ch;
+  margin-left:auto;margin-right:auto;
+  line-height:1.8;
+}
+
+.features-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:2px;
+}
+
+.feature-card{
+  background:var(--glass);
+  border:1px solid var(--border);
+  padding:40px 36px;
+  position:relative;
+  overflow:hidden;
+  transition:background .24s,border-color .24s;
+  cursor:none;
+}
+.feature-card::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:linear-gradient(135deg,rgba(0,255,136,.06),transparent 48%);
+  opacity:0;
+  transition:opacity .28s;
+}
+.feature-card:hover{
+  background:rgba(0,30,18,.82);
+  border-color:var(--border-bright);
+}
+.feature-card:hover::after{opacity:1}
+
+.feature-num{
+  font-family:var(--font-display);
+  font-size:4rem;
+  letter-spacing:.1em;
+  color:rgba(0,255,136,.08);
+  line-height:1;
+  margin-bottom:20px;
+  position:relative;z-index:1;
+}
+.feature-icon{
+  width:44px;height:44px;
+  border:1px solid var(--border-bright);
+  display:flex;align-items:center;justify-content:center;
+  margin-bottom:20px;
+  position:relative;z-index:1;
+  clip-path:polygon(0 0,calc(100% - 8px) 0,100% 8px,100% 100%,8px 100%,0 calc(100% - 8px));
+  background:rgba(0,255,136,.05);
+}
+.feature-icon svg{width:22px;height:22px;stroke:var(--neon);fill:none;stroke-width:1.5}
+
+.feature-title{
+  font-family:var(--font-body);
+  font-size:1.25rem;
+  font-weight:600;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  color:var(--white);
+  margin-bottom:12px;
+  position:relative;z-index:1;
+}
+.feature-desc{
+  font-size:.95rem;
+  font-weight:300;
+  line-height:1.85;
+  color:rgba(232,255,244,.45);
+  letter-spacing:.04em;
+  position:relative;z-index:1;
+}
+.feature-tag{
+  display:inline-block;
+  margin-top:18px;
+  font-family:var(--font-tech);
+  font-size:.64rem;
+  letter-spacing:.28em;
+  text-transform:uppercase;
+  color:var(--neon);
+  padding:5px 10px;
+  border:1px solid rgba(0,255,136,.18);
+  position:relative;z-index:1;
+}
+
+/* ─── THREAT DASHBOARD SECTION ─── */
+.dashboard-section{
+  position:relative;z-index:5;
+  padding:80px 64px;
+  background:rgba(0,8,4,.6);
+  border-top:1px solid var(--border);
+  border-bottom:1px solid var(--border);
+}
+
+.dashboard-grid{
+  display:grid;
+  grid-template-columns:1.4fr 1fr;
+  gap:24px;
+  align-items:start;
+}
+
+/* MAP PANEL */
+.map-panel{
+  background:var(--glass2);
+  border:1px solid var(--border);
+  position:relative;
+  overflow:hidden;
+}
+.map-panel::before{
+  content:"";
+  position:absolute;
+  top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--neon),transparent);
+  opacity:.2;
+}
+.panel-header{
+  padding:16px 22px;
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.panel-title{
+  font-family:var(--font-tech);
+  font-size:.72rem;
+  letter-spacing:.3em;
+  text-transform:uppercase;
+  color:var(--neon);
+}
+.panel-badge{
+  font-family:var(--font-mono);
+  font-size:.66rem;
+  letter-spacing:.18em;
+  color:var(--muted);
+  background:rgba(0,255,136,.05);
+  padding:4px 10px;
+  border:1px solid var(--border);
+}
+.panel-body{padding:22px}
+
+.world-map-wrap{
+  position:relative;
+  height:280px;
+  overflow:hidden;
+}
+#worldCanvas{
+  width:100%;height:100%;
+  display:block;
+}
+
+.map-overlay-info{
+  position:absolute;
+  bottom:14px;right:14px;
+  background:rgba(0,0,0,.7);
+  border:1px solid var(--border);
+  padding:10px 14px;
+  font-family:var(--font-tech);
+  font-size:.66rem;
+  letter-spacing:.2em;
+  color:var(--muted);
+}
+.map-overlay-info strong{color:var(--neon);display:block;font-size:.82rem;letter-spacing:.12em}
+
+/* STATS COLUMN */
+.stats-col{
+  display:flex;flex-direction:column;gap:16px;
+}
+
+.stat-block{
+  background:var(--glass2);
+  border:1px solid var(--border);
+  padding:22px;
+  position:relative;
+  overflow:hidden;
+}
+.stat-block::before{
+  content:"";
+  position:absolute;inset:0;
+  background:linear-gradient(135deg,rgba(0,255,136,.04),transparent 50%);
+}
+.stat-row{
+  display:flex;justify-content:space-between;align-items:center;
+  margin-bottom:10px;
+  position:relative;z-index:1;
+}
+.stat-name{
+  font-family:var(--font-tech);
+  font-size:.7rem;
+  letter-spacing:.24em;
+  text-transform:uppercase;
+  color:var(--muted);
+}
+.stat-value{
+  font-family:var(--font-mono);
+  font-size:.88rem;
+  color:var(--neon);
+}
+.stat-bar-track{
+  height:3px;
+  background:rgba(0,255,136,.08);
+  position:relative;z-index:1;
+  overflow:hidden;
+}
+.stat-bar-fill{
+  height:100%;
+  background:linear-gradient(90deg,var(--neon),var(--cyan));
+  box-shadow:0 0 8px var(--neon-glow);
+  transition:width 1.2s ease;
+}
+.stat-bar-fill.red{background:linear-gradient(90deg,var(--red),#ff8fa8)}
+.stat-bar-fill.amber{background:linear-gradient(90deg,var(--amber),#ffd080)}
+
+.big-stat{
+  background:var(--glass2);
+  border:1px solid var(--border);
+  padding:28px 22px;
+  text-align:center;
+  position:relative;
+  overflow:hidden;
+}
+.big-stat-val{
+  font-family:var(--font-display);
+  font-size:4.5rem;
+  color:var(--neon);
+  text-shadow:0 0 30px rgba(0,255,136,.4);
+  line-height:1;
+}
+.big-stat-label{
+  font-family:var(--font-tech);
+  font-size:.68rem;
+  letter-spacing:.36em;
+  text-transform:uppercase;
+  color:var(--muted);
+  margin-top:10px;
+}
+.big-stat-sub{
+  font-family:var(--font-mono);
+  font-size:.72rem;
+  color:var(--red);
+  margin-top:8px;
+}
+
+/* GRAPH BAR AREA */
+.mini-graph{
+  display:flex;align-items:flex-end;
+  gap:4px;
+  height:60px;
+  padding-top:8px;
+}
+.bar{
+  flex:1;
+  background:rgba(0,255,136,.18);
+  border-top:1px solid rgba(0,255,136,.4);
+  transition:height .6s ease;
+}
+.bar:hover{background:rgba(0,255,136,.36)}
+
+/* ─── PROTOCOLS SECTION ─── */
+.protocols{
+  position:relative;z-index:5;
+  padding:100px 64px;
+}
+
+.protocols-inner{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:80px;
+  align-items:center;
+}
+
+.proto-visual{
+  position:relative;
+  height:480px;
+}
+
+.proto-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+  position:absolute;inset:0;
+  align-content:start;
+}
+
+.proto-tile{
+  background:var(--glass);
+  border:1px solid var(--border);
+  padding:20px;
+  position:relative;
+  overflow:hidden;
+  transition:border-color .2s;
+}
+.proto-tile:hover{border-color:var(--border-bright)}
+.proto-tile::before{
+  content:"";
+  position:absolute;
+  top:0;left:0;right:0;height:2px;
+  background:var(--neon);
+  transform:scaleX(0);
+  transform-origin:left;
+  transition:transform .3s;
+}
+.proto-tile:hover::before{transform:scaleX(1)}
+.proto-tile-key{
+  font-family:var(--font-mono);
+  font-size:.64rem;
+  color:var(--muted);
+  letter-spacing:.2em;
+  margin-bottom:8px;
+}
+.proto-tile-val{
+  font-family:var(--font-display);
+  font-size:1.8rem;
+  color:var(--neon);
+  letter-spacing:.08em;
+  line-height:1;
+}
+.proto-tile-sub{
+  font-family:var(--font-tech);
+  font-size:.62rem;
+  color:rgba(0,255,136,.4);
+  letter-spacing:.24em;
+  text-transform:uppercase;
+  margin-top:4px;
+}
+
+.proto-tile.large{
+  grid-column:span 2;
+}
+
+.proto-content{}
+.proto-content .section-eyebrow{text-align:left}
+.proto-content .section-title{text-align:left}
+
+.proto-list{
+  display:grid;gap:14px;
+  margin-top:40px;
+}
+.proto-item{
+  display:flex;align-items:flex-start;gap:16px;
+  padding:18px 20px;
+  border:1px solid var(--border);
+  background:var(--glass);
+  transition:border-color .2s,background .2s;
+  cursor:none;
+}
+.proto-item:hover{
+  border-color:var(--border-bright);
+  background:rgba(0,30,18,.7);
+}
+.proto-item-icon{
+  width:36px;height:36px;
+  border:1px solid rgba(0,255,136,.22);
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;
+  background:rgba(0,255,136,.04);
+}
+.proto-item-icon svg{width:16px;height:16px;stroke:var(--neon);fill:none;stroke-width:1.5}
+.proto-item-body{}
+.proto-item-title{
+  font-family:var(--font-body);
+  font-weight:600;
+  font-size:.98rem;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  color:var(--white);
+  margin-bottom:4px;
+}
+.proto-item-desc{
+  font-size:.88rem;
+  font-weight:300;
+  color:rgba(232,255,244,.42);
+  letter-spacing:.04em;
+  line-height:1.7;
+}
+.proto-status{
+  margin-left:auto;
+  flex-shrink:0;
+  font-family:var(--font-tech);
+  font-size:.62rem;
+  letter-spacing:.22em;
+  text-transform:uppercase;
+  padding:5px 10px;
+  border:1px solid;
+}
+.proto-status.active{
+  color:var(--neon);
+  border-color:rgba(0,255,136,.24);
+  background:rgba(0,255,136,.05);
+}
+.proto-status.standby{
+  color:var(--amber);
+  border-color:rgba(255,170,0,.24);
+  background:rgba(255,170,0,.04);
+}
+
+/* ─── CTA SECTION ─── */
+.cta-section{
+  position:relative;z-index:5;
+  padding:120px 64px;
+  text-align:center;
+  overflow:hidden;
+}
+.cta-section::before{
+  content:"";
+  position:absolute;
+  left:50%;top:50%;
+  transform:translate(-50%,-50%);
+  width:700px;height:700px;
+  border-radius:50%;
+  background:radial-gradient(circle,rgba(0,255,136,.06) 0%,transparent 68%);
+  pointer-events:none;
+}
+.cta-section::after{
+  content:"";
+  position:absolute;inset:0;
+  border-top:1px solid var(--border);
+  border-bottom:1px solid var(--border);
+  pointer-events:none;
+}
+
+.cta-kicker{
+  font-family:var(--font-tech);
+  font-size:.72rem;
+  letter-spacing:.42em;
+  text-transform:uppercase;
+  color:var(--neon);
+  margin-bottom:20px;
+  position:relative;z-index:1;
+}
+.cta-title{
+  font-family:var(--font-display);
+  font-size:clamp(4rem,8vw,9rem);
+  letter-spacing:.08em;
+  color:var(--white);
+  line-height:.9;
+  text-transform:uppercase;
+  position:relative;z-index:1;
+}
+.cta-title .outline{
+  color:transparent;
+  -webkit-text-stroke:1px rgba(0,255,136,.35);
+}
+.cta-sub{
+  font-size:1rem;
+  font-weight:300;
+  color:rgba(232,255,244,.4);
+  max-width:52ch;
+  margin:24px auto 44px;
+  line-height:1.9;
+  letter-spacing:.06em;
+  position:relative;z-index:1;
+}
+
+.cta-form{
+  display:flex;
+  justify-content:center;
+  gap:0;
+  position:relative;z-index:1;
+  max-width:520px;
+  margin:0 auto;
+}
+.cta-input{
+  flex:1;
+  background:rgba(0,20,12,.8);
+  border:1px solid var(--border);
+  border-right:none;
+  color:var(--white);
+  font-family:var(--font-mono);
+  font-size:.82rem;
+  letter-spacing:.12em;
+  padding:16px 20px;
+  outline:none;
+  transition:border-color .2s;
+}
+.cta-input::placeholder{color:var(--muted)}
+.cta-input:focus{border-color:var(--neon)}
+
+.cta-note{
+  font-family:var(--font-tech);
+  font-size:.66rem;
+  letter-spacing:.24em;
+  text-transform:uppercase;
+  color:var(--muted);
+  margin-top:18px;
+  position:relative;z-index:1;
+}
+
+/* ─── FOOTER ─── */
+footer{
+  position:relative;z-index:5;
+  padding:40px 64px;
+  border-top:1px solid var(--border);
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:24px;
+}
+.footer-logo{
+  font-family:var(--font-display);
+  font-size:1.6rem;
+  letter-spacing:.32em;
+  color:var(--neon);
+  text-shadow:0 0 20px rgba(0,255,136,.28);
+}
+.footer-links{
+  display:flex;gap:28px;list-style:none;
+}
+.footer-links a{
+  font-family:var(--font-tech);
+  font-size:.68rem;
+  letter-spacing:.24em;
+  text-transform:uppercase;
+  color:var(--muted);
+  text-decoration:none;
+  transition:color .2s;
+}
+.footer-links a:hover{color:var(--neon)}
+.footer-copy{
+  font-family:var(--font-tech);
+  font-size:.66rem;
+  letter-spacing:.2em;
+  color:var(--muted2);
+  text-transform:uppercase;
+}
+
+/* ─── TICKER ─── */
+.ticker-wrap{
+  position:relative;z-index:6;
+  overflow:hidden;
+  border-top:1px solid rgba(0,255,136,.06);
+  border-bottom:1px solid rgba(0,255,136,.06);
+  background:rgba(0,0,0,.5);
+  padding:10px 0;
+}
+.ticker-track{
+  display:flex;gap:0;
+  animation:ticker 30s linear infinite;
+  white-space:nowrap;
+}
+.ticker-item{
+  display:inline-flex;align-items:center;gap:22px;
+  padding:0 40px;
+  font-family:var(--font-tech);
+  font-size:.72rem;
+  letter-spacing:.28em;
+  text-transform:uppercase;
+  color:var(--muted);
+  border-right:1px solid rgba(0,255,136,.08);
+}
+.ticker-item strong{color:var(--neon)}
+.ticker-item .dot{
+  width:5px;height:5px;border-radius:50%;
+  background:var(--neon);
+  opacity:.4;
+}
+@keyframes ticker{
+  from{transform:translateX(0)}
+  to{transform:translateX(-50%)}
+}
+
+/* GLITCH ANIMATION FOR TITLE */
+@keyframes glitch{
+  0%,90%,100%{text-shadow:0 0 40px rgba(0,255,136,.4),0 0 80px rgba(0,255,136,.15)}
+  92%{text-shadow:-2px 0 var(--red),2px 0 var(--cyan),0 0 40px rgba(0,255,136,.4)}
+  94%{text-shadow:2px 0 var(--red),-2px 0 var(--cyan),0 0 40px rgba(0,255,136,.4)}
+  96%{text-shadow:-1px 0 var(--cyan),1px 0 var(--red),0 0 40px rgba(0,255,136,.4)}
+  98%{text-shadow:0 0 40px rgba(0,255,136,.4),0 0 80px rgba(0,255,136,.15)}
+}
+.hero-title .line-neon{animation:glitch 6s ease-in-out infinite}
+
+/* REDUCED MOTION */
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{
+    animation:none!important;
+    transition:none!important;
+  }
+}
+
+/* RESPONSIVE */
+@media(max-width:1100px){
+  .hero{grid-template-columns:1fr}
+  .hero-right{display:none}
+  .features-grid{grid-template-columns:1fr 1fr}
+  .dashboard-grid{grid-template-columns:1fr}
+  .protocols-inner{grid-template-columns:1fr;gap:48px}
+  .proto-visual{height:auto;position:relative}
+  nav{padding:16px 28px}
+}
+@media(max-width:760px){
+  .features{padding:60px 24px 80px}
+  .dashboard-section{padding:60px 24px}
+  .protocols{padding:60px 24px}
+  .cta-section{padding:80px 24px}
+  footer{padding:30px 24px;flex-direction:column;align-items:flex-start;gap:18px}
+  .hero-left{padding:110px 28px 60px}
+  .features-grid{grid-template-columns:1fr}
+  .hero-metrics{gap:22px}
+  .nav-links{display:none}
+  .cta-form{flex-direction:column}
+  .cta-input{border-right:1px solid var(--border);border-bottom:none}
+}
+</style>
 </head>
 <body>
-  <canvas id="bgCanvas" aria-hidden="true"></canvas>
-  <div class="noise" aria-hidden="true"></div>
-  <div class="scanbeam" aria-hidden="true"></div>
 
-  <main class="wrap">
-    <section class="shell" aria-label="SERAPH landing page">
+<!-- CURSOR -->
+<div id="cursor"></div>
+<div id="cursor-dot"></div>
 
-      <header class="topbar">
-        <div class="brand">
-          <div class="logo" data-text="SERAPH_AI">SERAPH_AI</div>
-          <div class="tagline">
-            Defence intelligence, adaptive signal mapping, and live synthetic cognition in a single premium interface.
+<!-- BACKGROUND CANVASES -->
+<canvas id="hex-canvas" aria-hidden="true"></canvas>
+<canvas id="matrix-canvas" aria-hidden="true"></canvas>
+<canvas id="radar-canvas" aria-hidden="true"></canvas>
+<div class="scanline-overlay" aria-hidden="true"></div>
+<div class="vignette" aria-hidden="true"></div>
+
+<div class="site">
+
+  <!-- NAV -->
+  <nav aria-label="Main navigation">
+    <a href="#" class="nav-logo" aria-label="SERAPH Home">SERAPH</a>
+    <ul class="nav-links" role="list">
+      <li><a href="#features">Capabilities</a></li>
+      <li><a href="#dashboard">Intelligence</a></li>
+      <li><a href="#protocols">Protocols</a></li>
+      <li><a href="#access">Access</a></li>
+    </ul>
+    <div class="nav-status" aria-live="polite">
+      <div class="status-dot" role="img" aria-label="System online"></div>
+      <span id="nav-clock">SYS // ONLINE</span>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero" aria-label="Hero">
+
+    <div class="hero-left">
+      <div class="hero-eyebrow" role="doc-subtitle">Classified cognitive layer // active</div>
+
+      <h1 class="hero-title">
+        Sovereign
+        <span class="line-accent">Cyber</span>
+        <span class="line-neon">Defence</span>
+      </h1>
+
+      <p class="hero-sub">
+        SERAPH deploys <strong>autonomous threat cognition</strong> across your entire attack surface — zero-trust mesh, real-time SIGINT, and adaptive countermeasures fused into a single sovereign intelligence layer.
+      </p>
+
+      <div class="hero-cta">
+        <a href="#access" class="btn-primary">Request clearance</a>
+        <a href="#dashboard" class="btn-ghost">Live threat map</a>
+      </div>
+
+      <div class="hero-metrics" role="list" aria-label="Key metrics">
+        <div class="metric" role="listitem">
+          <div class="metric-val" id="m-threats">0</div>
+          <div class="metric-label">Threats neutralised</div>
+        </div>
+        <div class="metric" role="listitem">
+          <div class="metric-val">99.98%</div>
+          <div class="metric-label">Uptime SLA</div>
+        </div>
+        <div class="metric" role="listitem">
+          <div class="metric-val" id="m-ms">0ms</div>
+          <div class="metric-label">Avg response</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="hero-right" aria-hidden="true">
+      <div class="threat-orb-wrap">
+        <div class="orb-rings">
+          <div class="orb-ring"></div>
+          <div class="orb-ring"></div>
+          <div class="orb-ring"></div>
+        </div>
+        <canvas id="three-canvas"></canvas>
+      </div>
+      <div class="threat-label">Quantum mesh / adaptive geometry / threat lattice</div>
+
+      <div class="glass-card">
+        <div class="glass-card-title">// Live telemetry feed</div>
+        <div class="terminal-card" id="terminal" aria-live="polite"></div>
+      </div>
+
+      <div class="glass-card">
+        <div class="glass-card-title">// Threat matrix — live</div>
+        <div class="alert-list" id="alertList" aria-live="polite"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TICKER -->
+  <div class="ticker-wrap" aria-hidden="true">
+    <div class="ticker-track">
+      <div class="ticker-item"><span class="dot"></span><strong>SERAPH</strong>Autonomous cognition online</div>
+      <div class="ticker-item"><span class="dot"></span>Entropy field <strong>STABILISED</strong></div>
+      <div class="ticker-item"><span class="dot"></span>Zero-trust perimeter <strong>SEALED</strong></div>
+      <div class="ticker-item"><span class="dot"></span>SIGINT relay <strong>PASSIVE</strong></div>
+      <div class="ticker-item"><span class="dot"></span>Neural mesh <strong>SYNCED</strong></div>
+      <div class="ticker-item"><span class="dot"></span>AES-256 <strong>LOCKED</strong></div>
+      <div class="ticker-item"><span class="dot"></span>Threat vectors <strong>SUPPRESSED</strong></div>
+      <div class="ticker-item"><span class="dot"></span>Quantum relay <strong>NOMINAL</strong></div>
+      <!-- duplicate for seamless loop -->
+      <div class="ticker-item"><span class="dot"></span><strong>SERAPH</strong>Autonomous cognition online</div>
+      <div class="ticker-item"><span class="dot"></span>Entropy field <strong>STABILISED</strong></div>
+      <div class="ticker-item"><span class="dot"></span>Zero-trust perimeter <strong>SEALED</strong></div>
+      <div class="ticker-item"><span class="dot"></span>SIGINT relay <strong>PASSIVE</strong></div>
+      <div class="ticker-item"><span class="dot"></span>Neural mesh <strong>SYNCED</strong></div>
+      <div class="ticker-item"><span class="dot"></span>AES-256 <strong>LOCKED</strong></div>
+      <div class="ticker-item"><span class="dot"></span>Threat vectors <strong>SUPPRESSED</strong></div>
+      <div class="ticker-item"><span class="dot"></span>Quantum relay <strong>NOMINAL</strong></div>
+    </div>
+  </div>
+
+  <!-- FEATURES -->
+  <section class="features" id="features" aria-label="Capabilities">
+    <div class="section-header">
+      <div class="section-eyebrow">Core capabilities</div>
+      <h2 class="section-title">Engineered for<br><span>adversarial</span> terrain</h2>
+      <p class="section-sub">Purpose-built for environments where conventional defence fails. Every subsystem is designed to operate under sustained, sophisticated attack.</p>
+    </div>
+
+    <div class="features-grid" role="list">
+
+      <article class="feature-card" role="listitem">
+        <div class="feature-num">01</div>
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <h3 class="feature-title">Zero-Trust Mesh</h3>
+        <p class="feature-desc">Continuous verification across every node. No implicit trust, no persistent sessions. Every packet interrogated in microseconds.</p>
+        <span class="feature-tag">ENFORCED</span>
+      </article>
+
+      <article class="feature-card" role="listitem">
+        <div class="feature-num">02</div>
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+        </div>
+        <h3 class="feature-title">AI Threat Cognition</h3>
+        <p class="feature-desc">Sovereign neural inference predicts attack vectors before they materialise. No cloud dependency. On-premise, air-gapped inference at the edge.</p>
+        <span class="feature-tag">PREDICTIVE</span>
+      </article>
+
+      <article class="feature-card" role="listitem">
+        <div class="feature-num">03</div>
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </div>
+        <h3 class="feature-title">Quantum-Safe Crypto</h3>
+        <p class="feature-desc">Post-quantum key encapsulation with CRYSTALS-Kyber and Dilithium. Hardened against harvest-now-decrypt-later adversaries.</p>
+        <span class="feature-tag">FIPS 140-3</span>
+      </article>
+
+      <article class="feature-card" role="listitem">
+        <div class="feature-num">04</div>
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        </div>
+        <h3 class="feature-title">Live SIGINT Fusion</h3>
+        <p class="feature-desc">Real-time signals intelligence correlated across dark-web feeds, honeypots, and sovereign threat databases into a unified operational picture.</p>
+        <span class="feature-tag">STREAMING</span>
+      </article>
+
+      <article class="feature-card" role="listitem">
+        <div class="feature-num">05</div>
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        </div>
+        <h3 class="feature-title">Autonomous Response</h3>
+        <p class="feature-desc">Closed-loop containment executes in under 200ms. Isolate, quarantine, and counter without human latency in the kill chain.</p>
+        <span class="feature-tag">200ms SLA</span>
+      </article>
+
+      <article class="feature-card" role="listitem">
+        <div class="feature-num">06</div>
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+        </div>
+        <h3 class="feature-title">Deception Fabric</h3>
+        <p class="feature-desc">Distributed honeypot infrastructure and decoy credential ecosystems that ensnare, track, and attribute threat actors with forensic precision.</p>
+        <span class="feature-tag">ACTIVE</span>
+      </article>
+
+    </div>
+  </section>
+
+  <!-- THREAT DASHBOARD -->
+  <section class="dashboard-section" id="dashboard" aria-label="Intelligence dashboard">
+    <div class="section-header">
+      <div class="section-eyebrow">Global threat intelligence</div>
+      <h2 class="section-title">Threat surface<br><span>at a glance</span></h2>
+    </div>
+
+    <div class="dashboard-grid">
+      <div class="map-panel">
+        <div class="panel-header">
+          <span class="panel-title">// Global attack telemetry</span>
+          <span class="panel-badge" id="map-count">LOADING…</span>
+        </div>
+        <div class="panel-body">
+          <div class="world-map-wrap">
+            <canvas id="worldCanvas" aria-label="World threat map"></canvas>
+          </div>
+          <div class="map-overlay-info">
+            <strong id="active-attacks">—</strong>
+            ACTIVE VECTORS
           </div>
         </div>
+      </div>
 
-        <div class="status">
-          <div class="status-pill">Live cognitive relay</div>
-          <div class="clockline" id="clockline">UTC // --:--:--</div>
+      <div class="stats-col">
+
+        <div class="big-stat">
+          <div class="big-stat-val" id="big-blocked">—</div>
+          <div class="big-stat-label">Attacks blocked this session</div>
+          <div class="big-stat-sub" id="big-rate">▲ calculating…</div>
         </div>
-      </header>
 
-      <section class="layout">
-        <aside class="rail">
-          <div class="tile">
-            <div class="tile-inner">
-              <div class="rail-heading">
-                <span>Command rail</span>
-                <span>01</span>
-              </div>
-              <div class="rail-list">
-                <div class="rail-item"><span>Entropy field</span><span id="entropyVal">98.41%</span></div>
-                <div class="rail-item"><span>Signal integrity</span><span id="integrityVal">STABLE</span></div>
-                <div class="rail-item"><span>AI cognition</span><span id="cognitionVal">ACTIVE</span></div>
-                <div class="rail-item"><span>Perimeter</span><span id="perimeterVal">SEALED</span></div>
-              </div>
+        <div class="stat-block">
+          <div class="panel-header" style="padding:0 0 14px;margin-bottom:14px">
+            <span class="panel-title">// Vector breakdown</span>
+          </div>
 
-              <div class="mini-grid">
-                <div class="mini">
-                  <label>Latency</label>
-                  <strong id="latencyVal">21 ms</strong>
-                </div>
-                <div class="mini">
-                  <label>Confidence</label>
-                  <strong id="confidenceVal">99.8%</strong>
-                </div>
-                <div class="mini">
-                  <label>Loss</label>
-                  <strong id="lossVal">0.04%</strong>
-                </div>
-                <div class="mini">
-                  <label>Response</label>
-                  <strong id="responseVal">ONLINE</strong>
-                </div>
+          <div style="display:grid;gap:12px">
+            <div>
+              <div class="stat-row">
+                <span class="stat-name">DDoS / volumetric</span>
+                <span class="stat-value" id="sv1">42%</span>
               </div>
+              <div class="stat-bar-track"><div class="stat-bar-fill" id="sb1" style="width:42%"></div></div>
+            </div>
+            <div>
+              <div class="stat-row">
+                <span class="stat-name">Credential attacks</span>
+                <span class="stat-value" id="sv2">28%</span>
+              </div>
+              <div class="stat-bar-track"><div class="stat-bar-fill amber" id="sb2" style="width:28%"></div></div>
+            </div>
+            <div>
+              <div class="stat-row">
+                <span class="stat-name">Exploit / zero-day</span>
+                <span class="stat-value" id="sv3">18%</span>
+              </div>
+              <div class="stat-bar-track"><div class="stat-bar-fill red" id="sb3" style="width:18%"></div></div>
+            </div>
+            <div>
+              <div class="stat-row">
+                <span class="stat-name">Phishing / social</span>
+                <span class="stat-value" id="sv4">12%</span>
+              </div>
+              <div class="stat-bar-track"><div class="stat-bar-fill" id="sb4" style="width:12%"></div></div>
             </div>
           </div>
 
-          <div class="tile">
-            <div class="tile-inner">
-              <div class="rail-heading">
-                <span>Protocols</span>
-                <span>02</span>
-              </div>
-              <div class="rail-list">
-                <div class="rail-item"><span>Zero-trust mesh</span><span>ENFORCED</span></div>
-                <div class="rail-item"><span>AES-256 relay</span><span>LOCKED</span></div>
-                <div class="rail-item"><span>ChaCha20 stream</span><span>ACTIVE</span></div>
-                <div class="rail-item"><span>Seraph tumbler</span><span class="warn">OBFUSCATED</span></div>
-                <div class="rail-item"><span>Vector scan</span><span class="danger">MONITORING</span></div>
-              </div>
-            </div>
+          <div class="mini-graph" id="miniGraph" style="margin-top:20px" aria-hidden="true"></div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- PROTOCOLS -->
+  <section class="protocols" id="protocols" aria-label="Security protocols">
+    <div class="protocols-inner">
+
+      <div class="proto-visual" aria-hidden="true">
+        <div class="proto-grid">
+          <div class="proto-tile">
+            <div class="proto-tile-key">// ENTROPY</div>
+            <div class="proto-tile-val" id="p-entropy">98.4%</div>
+            <div class="proto-tile-sub">field depth</div>
           </div>
-        </aside>
+          <div class="proto-tile">
+            <div class="proto-tile-key">// LATENCY</div>
+            <div class="proto-tile-val" id="p-latency">18ms</div>
+            <div class="proto-tile-sub">response</div>
+          </div>
+          <div class="proto-tile large">
+            <div class="proto-tile-key">// MESH COVERAGE</div>
+            <div class="proto-tile-val">ULTRA</div>
+            <div class="proto-tile-sub">zero-trust perimeter — all nodes</div>
+          </div>
+          <div class="proto-tile">
+            <div class="proto-tile-key">// CIPHER</div>
+            <div class="proto-tile-val">AES</div>
+            <div class="proto-tile-sub">256-bit GCM</div>
+          </div>
+          <div class="proto-tile">
+            <div class="proto-tile-key">// LOSS</div>
+            <div class="proto-tile-val" id="p-loss">0.02%</div>
+            <div class="proto-tile-sub">packet integrity</div>
+          </div>
+        </div>
+      </div>
 
-        <section class="main">
-          <section class="hero">
-            <div class="hero-inner">
-              <div class="hero-copy">
-                <div class="eyebrow">Classified synthetic intelligence layer</div>
-                <h1>
-                  Autonomous
-                  <span>defence grid</span>
-                </h1>
-                <p>
-                  A denser cyber-intelligence landing page with stronger hierarchy, holographic geometry, live analytics, network routing, and terminal telemetry. It is built to feel engineered rather than decorated.
-                </p>
-                <div class="hero-actions">
-                  <button class="btn" type="button" onclick="document.getElementById('terminal').scrollIntoView({behavior:'smooth', block:'center'})">Inspect telemetry</button>
-                  <button class="btn secondary" type="button" onclick="document.querySelector('.map').scrollIntoView({behavior:'smooth', block:'center'})">View threat map</button>
-                </div>
-              </div>
+      <div class="proto-content">
+        <div class="section-eyebrow">Security stack</div>
+        <h2 class="section-title" style="font-size:clamp(2.8rem,5vw,5.5rem)">
+          Hardened<br>
+          <span>at every</span><br>
+          layer
+        </h2>
 
-              <div class="hero-right">
-                <div class="card">
-                  <div class="card-inner">
-                    <div class="stat-grid">
-                      <div class="stat"><label>Mesh depth</label><strong>ULTRA</strong></div>
-                      <div class="stat"><label>Threat drift</label><strong>STABLE</strong></div>
-                      <div class="stat"><label>Core state</label><strong>LIVE</strong></div>
-                      <div class="stat"><label>Lock mode</label><strong>SEALED</strong></div>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="core-shell">
-                  <div id="coreStage"></div>
-                  <div class="core-label">
-                    <div class="left">
-                      quantum relay stabilised<br>
-                      adaptive geometry engaged
-                    </div>
-                    <div class="right">
-                      signal depth: ultra<br>
-                      latency: low / locked
-                    </div>
-                  </div>
-                </div>
-              </div>
+        <nav class="proto-list" aria-label="Security protocols">
+          <div class="proto-item">
+            <div class="proto-item-icon">
+              <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
             </div>
-          </section>
-
-          <div class="toolbar">
-            <div class="toolbar-left">
-              <div class="chip">Live analytics</div>
-              <div class="chip">Waveform</div>
-              <div class="chip">Heatmap</div>
-              <div class="chip">SIGINT</div>
+            <div class="proto-item-body">
+              <div class="proto-item-title">CRYSTALS-Kyber KEM</div>
+              <div class="proto-item-desc">NIST-selected post-quantum key encapsulation. Resistant to Shor's algorithm and quantum oracle attacks.</div>
             </div>
-            <div class="toolbar-right">dynamic surface / encrypted routing / predictive loop</div>
+            <div class="proto-status active">Active</div>
           </div>
 
-          <section class="bottom">
-            <article class="panel">
-              <div class="panel-inner">
-                <div class="panel-head">
-                  <span>Telemetry analytics</span>
-                  <span class="sub">observable plot</span>
-                </div>
-                <div class="chart-box" id="telemetryHost"></div>
-              </div>
-            </article>
-
-            <article class="panel">
-              <div class="panel-inner">
-                <div class="panel-head">
-                  <span>Threat geometry</span>
-                  <span class="sub">network map</span>
-                </div>
-
-                <div class="map">
-                  <svg viewBox="0 0 1000 640" preserveAspectRatio="none" aria-hidden="true">
-                    <path class="gridline" d="M0 120 H1000"></path>
-                    <path class="gridline" d="M0 240 H1000"></path>
-                    <path class="gridline" d="M0 360 H1000"></path>
-                    <path class="gridline" d="M0 480 H1000"></path>
-                    <path class="gridline" d="M170 0 V640"></path>
-                    <path class="gridline" d="M340 0 V640"></path>
-                    <path class="gridline" d="M510 0 V640"></path>
-                    <path class="gridline" d="M680 0 V640"></path>
-                    <path class="gridline" d="M850 0 V640"></path>
-
-                    <path class="route" d="M90 450 C180 300, 260 250, 355 260 S530 340, 650 210 S830 110, 910 160"></path>
-                    <path class="route" d="M160 165 C260 220, 340 235, 420 190 S610 70, 730 150 S860 280, 935 340"></path>
-                    <path class="route" d="M120 560 C240 470, 350 475, 460 500 S650 560, 760 470 S880 390, 940 455"></path>
-
-                    <circle class="node" cx="90" cy="450" r="9"></circle>
-                    <circle class="node delay" cx="355" cy="260" r="10"></circle>
-                    <circle class="node" cx="650" cy="210" r="11"></circle>
-                    <circle class="node delay blue" cx="910" cy="160" r="9"></circle>
-
-                    <circle class="node blue" cx="160" cy="165" r="8"></circle>
-                    <circle class="node delay" cx="420" cy="190" r="10"></circle>
-                    <circle class="node blue" cx="730" cy="150" r="9"></circle>
-                    <circle class="node delay red" cx="935" cy="340" r="10"></circle>
-
-                    <circle class="node" cx="120" cy="560" r="8"></circle>
-                    <circle class="node delay" cx="460" cy="500" r="10"></circle>
-                    <circle class="node blue" cx="760" cy="470" r="9"></circle>
-                    <circle class="node delay" cx="940" cy="455" r="8"></circle>
-                  </svg>
-                </div>
-
-                <div class="map-caption">
-                  <span>Nodes self-adjust in real time</span>
-                  <span>Adaptive response enabled</span>
-                </div>
-              </div>
-            </article>
-
-            <article class="panel">
-              <div class="panel-inner">
-                <div class="panel-head">
-                  <span>Live telemetry feed</span>
-                  <span class="sub">sigint // streaming</span>
-                </div>
-                <div class="terminal" id="terminal" aria-live="polite"></div>
-              </div>
-            </article>
-
-            <article class="panel">
-              <div class="panel-inner">
-                <div class="panel-head">
-                  <span>Response matrix</span>
-                  <span class="sub">encrypted</span>
-                </div>
-                <div class="status-stack">
-                  <div class="status-row"><span>Packet inspection</span><span>PASSIVE</span></div>
-                  <div class="status-row"><span>Key exchange</span><span>VALID</span></div>
-                  <div class="status-row"><span>Threat suppression</span><span>AGGRESSIVE</span></div>
-                  <div class="status-row"><span>AI uncertainty</span><span class="warn">LOW</span></div>
-                  <div class="status-row"><span>Command authority</span><span>LOCAL</span></div>
-                </div>
-              </div>
-            </article>
-          </section>
-
-          <div class="ticker" aria-hidden="true">
-            <div class="ticker-inner">
-              <span><strong>SERAPH</strong> // autonomous cognition online</span>
-              <span>entropy field stabilised</span>
-              <span>adaptive countermeasures armed</span>
-              <span>SIGINT relay passive</span>
-              <span>zero-trust perimeter sealed</span>
-              <span>neural mesh synchronised</span>
-              <span><strong>SERAPH</strong> // autonomous cognition online</span>
-              <span>entropy field stabilised</span>
-              <span>adaptive countermeasures armed</span>
-              <span>SIGINT relay passive</span>
-              <span>zero-trust perimeter sealed</span>
-              <span>neural mesh synchronised</span>
+          <div class="proto-item">
+            <div class="proto-item-icon">
+              <svg viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
             </div>
+            <div class="proto-item-body">
+              <div class="proto-item-title">Adaptive Deception Layer</div>
+              <div class="proto-item-desc">Real-time honeypot deployment and attacker attribution with forensic-grade telemetry capture.</div>
+            </div>
+            <div class="proto-status active">Active</div>
           </div>
 
-          <footer class="footer">
-            <div><strong>SERAPH</strong> // classified defence grid</div>
-            <div>desktop-grade depth, mobile-safe fallbacks</div>
-          </footer>
-        </section>
-      </section>
-    </section>
-  </main>
+          <div class="proto-item">
+            <div class="proto-item-icon">
+              <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            </div>
+            <div class="proto-item-body">
+              <div class="proto-item-title">Air-Gap AI Inference</div>
+              <div class="proto-item-desc">Sovereign threat prediction with no external dependencies. Operates isolated from public networks.</div>
+            </div>
+            <div class="proto-status standby">Standby</div>
+          </div>
 
-  <script>
-    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const isMobile = window.matchMedia('(max-width: 760px)').matches;
-    const shell = document.querySelector('.shell');
+          <div class="proto-item">
+            <div class="proto-item-icon">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+            </div>
+            <div class="proto-item-body">
+              <div class="proto-item-title">Temporal Key Rotation</div>
+              <div class="proto-item-desc">Ephemeral session keys rotated every 90 seconds. Perfect forward secrecy across all relay channels.</div>
+            </div>
+            <div class="proto-status active">Active</div>
+          </div>
+        </nav>
+      </div>
 
-    // Clock
-    const clockline = document.getElementById('clockline');
-    function tickClock() {
-      const d = new Date();
-      const pad = n => String(n).padStart(2, '0');
-      clockline.textContent = `UTC // ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}`;
-    }
-    tickClock();
-    setInterval(tickClock, 1000);
+    </div>
+  </section>
 
-    // Dynamic metrics
-    const entropyVal = document.getElementById('entropyVal');
-    const integrityVal = document.getElementById('integrityVal');
-    const cognitionVal = document.getElementById('cognitionVal');
-    const perimeterVal = document.getElementById('perimeterVal');
-    const latencyVal = document.getElementById('latencyVal');
-    const confidenceVal = document.getElementById('confidenceVal');
-    const lossVal = document.getElementById('lossVal');
-    const responseVal = document.getElementById('responseVal');
+  <!-- CTA -->
+  <section class="cta-section" id="access" aria-label="Request access">
+    <div class="cta-kicker">Clearance required</div>
+    <h2 class="cta-title">
+      <span class="outline">Request</span><br>Access
+    </h2>
+    <p class="cta-sub">SERAPH is deployed exclusively to verified defence contractors, national security agencies, and critical infrastructure operators.</p>
 
-    let entropy = 98.41;
-    let latency = 21;
-    let confidence = 99.80;
-    let loss = 0.04;
-    let flip = false;
+    <div class="cta-form" role="form" aria-label="Access request form">
+      <input type="email" class="cta-input" placeholder="// secure.contact@agency.mil" aria-label="Email address"/>
+      <button type="button" class="btn-primary" style="white-space:nowrap">Request clearance</button>
+    </div>
+    <div class="cta-note">All requests are vetted against national security criteria. Civilian access is not available.</div>
+  </section>
 
-    function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-logo">SERAPH</div>
+    <ul class="footer-links" role="list">
+      <li><a href="#">Documentation</a></li>
+      <li><a href="#">Compliance</a></li>
+      <li><a href="#">Security advisories</a></li>
+      <li><a href="#">Contact</a></li>
+    </ul>
+    <div class="footer-copy">© 2026 SERAPH Systems // Classified</div>
+  </footer>
 
-    function updateMetrics(){
-      entropy = clamp(entropy + (Math.random() - 0.45) * 1.0, 96.8, 99.96);
-      latency = clamp(latency + (Math.random() - 0.5) * 3.3, 8, 32);
-      confidence = clamp(confidence + (Math.random() - 0.48) * 0.15, 99.1, 99.99);
-      loss = clamp(loss + (Math.random() - 0.5) * 0.01, 0.01, 0.12);
-      flip = !flip;
+</div><!-- /site -->
 
-      entropyVal.textContent = `${entropy.toFixed(2)}%`;
-      integrityVal.textContent = confidence > 99.4 ? 'STABLE' : 'MONITOR';
-      cognitionVal.textContent = flip ? 'ACTIVE' : 'PREDICTIVE';
-      perimeterVal.textContent = flip ? 'SEALED' : 'LOCKED';
-      latencyVal.textContent = `${Math.round(latency)} ms`;
-      confidenceVal.textContent = `${confidence.toFixed(2)}%`;
-      lossVal.textContent = `${loss.toFixed(2)}%`;
-      responseVal.textContent = flip ? 'ONLINE' : 'READY';
-    }
-    updateMetrics();
-    setInterval(updateMetrics, 1900);
+<script>
+// ─── CURSOR ───────────────────────────────────────────────
+const cursor = document.getElementById('cursor');
+const cursorDot = document.getElementById('cursor-dot');
+let mx=0,my=0,cx=0,cy=0;
+document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY});
+(function animCursor(){
+  cx+=(mx-cx)*.18; cy+=(my-cy)*.18;
+  cursor.style.left=mx+'px'; cursor.style.top=my+'px';
+  cursorDot.style.left=mx+'px'; cursorDot.style.top=my+'px';
+  requestAnimationFrame(animCursor);
+})();
 
-    // Terminal
-    const terminal = document.getElementById('terminal');
-    const feed = [
-      "[SYS] Establishing encrypted relay chain...",
-      "[AI] Neural lattice synchronised.",
-      "[CORE] Quantum entropy stabilised.",
-      "[SCAN] Hostile surface vectors under review.",
-      "[AUTH] Zero-trust verification complete.",
-      "[NET] Segmented mesh active.",
-      "[CRYPTO] AES-256 channel sealed.",
-      "[AI] Predictive threat modelling engaged.",
-      "[SIGINT] Passive signal collection online.",
-      "[SERAPH] Autonomous intelligence initialised."
-    ];
-    let feedIndex = 0;
+// ─── CLOCK ────────────────────────────────────────────────
+const navClock=document.getElementById('nav-clock');
+function tickClock(){
+  const d=new Date();
+  const p=n=>String(n).padStart(2,'0');
+  navClock.textContent=`UTC // ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}:${p(d.getUTCSeconds())} // ONLINE`;
+}
+tickClock(); setInterval(tickClock,1000);
 
-    function pushTerminalLine() {
-      const line = document.createElement('div');
-      line.className = 'terminal-line';
-      line.textContent = feed[feedIndex];
-      const caret = document.createElement('span');
-      caret.className = 'cursor';
-      line.appendChild(caret);
-      terminal.appendChild(line);
-      terminal.scrollTop = terminal.scrollHeight;
-      feedIndex = (feedIndex + 1) % feed.length;
-      while (terminal.children.length > 10) terminal.removeChild(terminal.firstChild);
-    }
-    pushTerminalLine();
-    setInterval(pushTerminalLine, 900);
+// ─── ANIMATED COUNTER ─────────────────────────────────────
+function animCount(el,target,suffix,duration){
+  let start=0,startTime=null;
+  function step(ts){
+    if(!startTime)startTime=ts;
+    const prog=Math.min((ts-startTime)/duration,1);
+    el.textContent=Math.floor(prog*target)+suffix;
+    if(prog<1)requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+animCount(document.getElementById('m-threats'),148923,'',2200);
+animCount(document.getElementById('m-ms'),17,'ms',1800);
 
-    // Observable Plot analytics
-    const telemetryHost = document.getElementById('telemetryHost');
-    let phase = 0;
-
-    function series(count, base, amp, noise, speed) {
-      return Array.from({ length: count }, (_, i) => ({
-        t: i,
-        value: base + Math.sin((i + phase) / speed) * amp + (Math.random() - 0.5) * noise
-      }));
-    }
-
-    function renderPlots() {
-      telemetryHost.innerHTML = '';
-
-      const entropyData = series(72, 68, 9, 3, 5.1);
-      const threatData = series(72, 26, 5, 2.5, 7.8);
-      const sectors = Array.from({ length: 9 }, (_, i) => ({
-        sector: `S${i + 1}`,
-        intensity: 18 + Math.round(14 * Math.abs(Math.sin((i + phase) / 2.8))) + Math.round(Math.random() * 6)
-      }));
-
-      const title1 = document.createElement('div');
-      title1.className = 'panel-head';
-      title1.innerHTML = '<span>Signal entropy</span><span class="sub">adaptive waveform</span>';
-
-      const plot1 = document.createElement('div');
-      plot1.className = 'plot';
-      plot1.appendChild(Plot.plot({
-        height: 186,
-        marginLeft: 44,
-        marginRight: 18,
-        marginTop: 14,
-        marginBottom: 30,
-        background: 'transparent',
-        style: { color: '#00ff99', fontFamily: 'IBM Plex Mono, monospace' },
-        x: { label: null, ticks: 6, tickSize: 5 },
-        y: { label: null, grid: true, nice: true },
-        marks: [
-          Plot.areaY(entropyData, { x: 't', y: 'value', curve: 'basis', fill: '#00ff99', fillOpacity: 0.08 }),
-          Plot.lineY(entropyData, { x: 't', y: 'value', curve: 'basis', stroke: '#00ff99', strokeWidth: 2 }),
-          Plot.dot(entropyData.filter((_, i) => i % 12 === 0), { x: 't', y: 'value', fill: '#dfffee', r: 2.3 })
-        ]
-      }));
-
-      const title2 = document.createElement('div');
-      title2.className = 'panel-head';
-      title2.innerHTML = '<span>Threat intensity</span><span class="sub">sector heat</span>';
-
-      const plot2 = document.createElement('div');
-      plot2.className = 'plot';
-      plot2.appendChild(Plot.plot({
-        height: 160,
-        marginLeft: 44,
-        marginRight: 18,
-        marginTop: 14,
-        marginBottom: 26,
-        background: 'transparent',
-        style: { color: '#00ff99', fontFamily: 'IBM Plex Mono, monospace' },
-        x: { label: null, axis: null },
-        y: { label: null, grid: true, nice: true },
-        marks: [
-          Plot.barY(sectors, { x: 'sector', y: 'intensity', fill: 'rgba(0,255,153,.58)' }),
-          Plot.ruleY([0], { stroke: 'rgba(0,255,153,.15)' })
-        ]
-      }));
-
-      telemetryHost.append(title1, plot1, title2, plot2);
-      phase += 1;
-    }
-    renderPlots();
-    setInterval(renderPlots, 2200);
-
-    // Three.js core
-    const threeHost = document.getElementById('coreStage');
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
-    camera.position.set(0, 0, 6.2);
-
-    const renderer = new THREE.WebGLRenderer({
-      alpha: true,
-      antialias: !isMobile,
-      powerPreference: 'high-performance'
-    });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobile ? 1.15 : 1.6));
-    renderer.setClearColor(0x000000, 0);
-    threeHost.appendChild(renderer.domElement);
-
-    const group = new THREE.Group();
-    scene.add(group);
-
-    scene.add(new THREE.AmbientLight(0x99ffdd, 1.15));
-    const key = new THREE.DirectionalLight(0x00ff99, 1.8);
-    key.position.set(3, 4, 5);
-    scene.add(key);
-
-    const rim = new THREE.PointLight(0x52ddff, 1.6, 30);
-    rim.position.set(-4, -2, 5);
-    scene.add(rim);
-
-    const pulse = new THREE.PointLight(0xff4d8a, 0.9, 24);
-    pulse.position.set(0, 2.5, 4);
-    scene.add(pulse);
-
-    const coreGeo = new THREE.IcosahedronGeometry(1.2, 2);
-    const coreMat = new THREE.MeshStandardMaterial({
-      color: 0x06160f,
-      emissive: 0x00ff99,
-      emissiveIntensity: 0.8,
-      metalness: 0.25,
-      roughness: 0.22,
-      transparent: true,
-      opacity: 0.28
-    });
-
-    const coreMesh = new THREE.Mesh(coreGeo, coreMat);
-    group.add(coreMesh);
-
-    const wireMesh = new THREE.Mesh(
-      coreGeo,
-      new THREE.MeshBasicMaterial({
-        color: 0x00ff99,
-        wireframe: true,
-        transparent: true,
-        opacity: 0.24
-      })
-    );
-    group.add(wireMesh);
-
-    const ring1 = new THREE.Mesh(
-      new THREE.TorusGeometry(2.02, 0.036, 12, 280),
-      new THREE.MeshBasicMaterial({ color: 0x00ff99, transparent: true, opacity: 0.42 })
-    );
-    ring1.rotation.x = Math.PI / 2;
-    group.add(ring1);
-
-    const ring2 = new THREE.Mesh(
-      new THREE.TorusGeometry(2.42, 0.02, 10, 220),
-      new THREE.MeshBasicMaterial({ color: 0x52ddff, transparent: true, opacity: 0.22 })
-    );
-    ring2.rotation.y = Math.PI / 2;
-    group.add(ring2);
-
-    const halo = new THREE.Mesh(
-      new THREE.TorusGeometry(1.46, 0.016, 10, 220),
-      new THREE.MeshBasicMaterial({ color: 0xff4d8a, transparent: true, opacity: 0.18 })
-    );
-    halo.rotation.z = Math.PI / 3;
-    group.add(halo);
-
-    const knot = new THREE.Mesh(
-      new THREE.TorusKnotGeometry(1.36, 0.07, 220, 24),
-      new THREE.MeshBasicMaterial({ color: 0x00d98a, transparent: true, opacity: 0.28 })
-    );
-    group.add(knot);
-
-    const particleCount = reduceMotion ? 0 : (isMobile ? 120 : 220);
-    const particleGeo = new THREE.BufferGeometry();
-    const particlePos = new Float32Array(particleCount * 3);
-    for(let i=0;i<particleCount;i++){
-      const r = 3 + Math.random()*3.8;
-      const theta = Math.random()*Math.PI*2;
-      const phi = Math.acos(2*Math.random()-1);
-      particlePos[i*3+0] = r*Math.sin(phi)*Math.cos(theta);
-      particlePos[i*3+1] = r*Math.sin(phi)*Math.sin(theta);
-      particlePos[i*3+2] = r*Math.cos(phi);
-    }
-    particleGeo.setAttribute('position', new THREE.BufferAttribute(particlePos, 3));
-
-    const particleField = new THREE.Points(
-      particleGeo,
-      new THREE.PointsMaterial({
-        color: 0x00ff99,
-        size: isMobile ? 0.018 : 0.02,
-        transparent: true,
-        opacity: 0.78,
-        depthWrite: false
-      })
-    );
-    group.add(particleField);
-
-    const pointer = { x:0, y:0, active:false };
-    const target = { x:0, y:0 };
-
-    function resizeThree(){
-      const rect = threeHost.getBoundingClientRect();
-      const width = Math.max(1, rect.width);
-      const height = Math.max(1, rect.height);
-      camera.aspect = width / height;
-      camera.updateProjectionMatrix();
-      renderer.setSize(width, height, false);
-    }
-    resizeThree();
-    window.addEventListener('resize', resizeThree);
-
-    window.addEventListener('pointermove', (e) => {
-      pointer.x = (e.clientX / window.innerWidth - 0.5) * 2;
-      pointer.y = (e.clientY / window.innerHeight - 0.5) * 2;
-      pointer.active = true;
-
-      if (!isMobile) {
-        const rx = (e.clientY / window.innerHeight - 0.5) * -0.55;
-        const ry = (e.clientX / window.innerWidth - 0.5) * 0.85;
-        shell.style.transform = `perspective(1400px) rotateX(${rx}deg) rotateY(${ry}deg)`;
+// ─── HEX BACKGROUND ───────────────────────────────────────
+const hexCanvas=document.getElementById('hex-canvas');
+const hctx=hexCanvas.getContext('2d');
+function drawHex(){
+  hexCanvas.width=window.innerWidth;
+  hexCanvas.height=window.innerHeight;
+  const s=42,w=window.innerWidth,h=window.innerHeight;
+  const cols=Math.ceil(w/(s*1.73))+2;
+  const rows=Math.ceil(h/(s*1.5))+2;
+  hctx.strokeStyle='#00ff88';
+  hctx.lineWidth=.6;
+  for(let r=0;r<rows;r++){
+    for(let c=0;c<cols;c++){
+      const x=c*s*1.73+(r%2)*s*0.865;
+      const y=r*s*1.5;
+      hctx.beginPath();
+      for(let i=0;i<6;i++){
+        const a=Math.PI/180*(60*i-30);
+        i===0?hctx.moveTo(x+s*Math.cos(a),y+s*Math.sin(a)):hctx.lineTo(x+s*Math.cos(a),y+s*Math.sin(a));
       }
+      hctx.closePath();hctx.stroke();
+    }
+  }
+}
+drawHex();
+window.addEventListener('resize',drawHex);
+
+// ─── MATRIX RAIN ──────────────────────────────────────────
+const matCanvas=document.getElementById('matrix-canvas');
+const mctx=matCanvas.getContext('2d');
+const chars='01アイウエオカキクケコサシスセソタチツテトナニヌネノABCDEF';
+let drops=[];
+function initMatrix(){
+  matCanvas.width=window.innerWidth;
+  matCanvas.height=window.innerHeight;
+  const cols=Math.floor(window.innerWidth/16);
+  drops=Array.from({length:cols},()=>Math.random()*-50);
+}
+initMatrix();
+window.addEventListener('resize',initMatrix);
+function drawMatrix(){
+  mctx.fillStyle='rgba(0,0,0,.04)';
+  mctx.fillRect(0,0,matCanvas.width,matCanvas.height);
+  mctx.fillStyle='#00ff88';
+  mctx.font='13px JetBrains Mono,monospace';
+  drops.forEach((y,i)=>{
+    const c=chars[Math.floor(Math.random()*chars.length)];
+    mctx.fillText(c,i*16,y*16);
+    if(y*16>matCanvas.height&&Math.random()>.97)drops[i]=0;
+    drops[i]+=.5;
+  });
+}
+setInterval(drawMatrix,60);
+
+// ─── RADAR ────────────────────────────────────────────────
+const radCanvas=document.getElementById('radar-canvas');
+const rctx=radCanvas.getContext('2d');
+let radAngle=0;
+const radBlips=[];
+function initRadar(){
+  radCanvas.width=window.innerWidth;
+  radCanvas.height=window.innerHeight;
+}
+initRadar();
+window.addEventListener('resize',initRadar);
+// Spawn blips around a center radar (bottom right)
+const RC={x:()=>radCanvas.width-140,y:()=>radCanvas.height-140,r:110};
+for(let i=0;i<12;i++){
+  const a=Math.random()*Math.PI*2;
+  const r=Math.random()*RC.r*.9;
+  radBlips.push({a,r,life:0,maxLife:Math.random()*180+60});
+}
+function drawRadar(){
+  rctx.clearRect(0,0,radCanvas.width,radCanvas.height);
+  const cx=RC.x(),cy=RC.y(),cr=RC.r;
+  // rings
+  rctx.strokeStyle='rgba(0,255,136,.14)';
+  rctx.lineWidth=1;
+  [.33,.66,1].forEach(f=>{
+    rctx.beginPath();rctx.arc(cx,cy,cr*f,0,Math.PI*2);rctx.stroke();
+  });
+  // cross
+  rctx.beginPath();rctx.moveTo(cx-cr,cy);rctx.lineTo(cx+cr,cy);rctx.stroke();
+  rctx.beginPath();rctx.moveTo(cx,cy-cr);rctx.lineTo(cx,cy+cr);rctx.stroke();
+  // sweep
+  const grad=rctx.createConicalGradient?rctx.createConicalGradient(cx,cy,radAngle):null;
+  rctx.save();
+  rctx.beginPath();rctx.arc(cx,cy,cr,radAngle-1.2,radAngle);
+  rctx.lineTo(cx,cy);rctx.closePath();
+  rctx.fillStyle='rgba(0,255,136,.18)';
+  rctx.fill();
+  // beam line
+  rctx.beginPath();
+  rctx.moveTo(cx,cy);
+  rctx.lineTo(cx+Math.cos(radAngle)*cr,cy+Math.sin(radAngle)*cr);
+  rctx.strokeStyle='rgba(0,255,136,.7)';rctx.lineWidth=1.5;
+  rctx.stroke();
+  rctx.restore();
+  // blips
+  radBlips.forEach(b=>{
+    b.life++;
+    if(b.life>b.maxLife){b.life=0;b.a=Math.random()*Math.PI*2;b.r=Math.random()*cr*.9;}
+    const diff=((radAngle-b.a)%(Math.PI*2)+Math.PI*2)%(Math.PI*2);
+    if(diff<1.3){
+      const alpha=Math.max(0,1-diff/1.3)*0.85;
+      const bx=cx+Math.cos(b.a)*b.r;
+      const by=cy+Math.sin(b.a)*b.r;
+      rctx.beginPath();rctx.arc(bx,by,2.5,0,Math.PI*2);
+      rctx.fillStyle=`rgba(0,255,136,${alpha})`;rctx.fill();
+    }
+  });
+  radAngle+=0.018;
+  requestAnimationFrame(drawRadar);
+}
+drawRadar();
+
+// ─── THREE.JS ORB ─────────────────────────────────────────
+(function(){
+  const c=document.getElementById('three-canvas');
+  if(!c||!window.THREE)return;
+  const scene=new THREE.Scene();
+  const camera=new THREE.PerspectiveCamera(40,1,.1,100);
+  camera.position.set(0,0,6);
+  const renderer=new THREE.WebGLRenderer({canvas:c,alpha:true,antialias:true});
+  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  renderer.setClearColor(0,0);
+  renderer.setSize(340,340);
+
+  scene.add(new THREE.AmbientLight(0x99ffdd,1.2));
+  const dl=new THREE.DirectionalLight(0x00ff88,2.2);dl.position.set(3,4,5);scene.add(dl);
+  const pl=new THREE.PointLight(0x17f3e8,1.8,30);pl.position.set(-4,-2,4);scene.add(pl);
+  const pl2=new THREE.PointLight(0xff2d5b,.8,20);pl2.position.set(0,3,3);scene.add(pl2);
+
+  const g=new THREE.Group();scene.add(g);
+
+  // Core icosahedron
+  const icoGeo=new THREE.IcosahedronGeometry(1.3,2);
+  g.add(new THREE.Mesh(icoGeo,new THREE.MeshStandardMaterial({
+    color:0x03150a,emissive:0x00ff88,emissiveIntensity:.7,
+    metalness:.3,roughness:.2,transparent:true,opacity:.22
+  })));
+  g.add(new THREE.Mesh(icoGeo,new THREE.MeshBasicMaterial({
+    color:0x00ff88,wireframe:true,transparent:true,opacity:.18
+  })));
+
+  // Rings
+  [[2.1,.04,0x00ff88,.4,0,Math.PI/2,0],[2.5,.025,0x17f3e8,.2,Math.PI/2,0,0],
+   [1.6,.02,0xff2d5b,.15,Math.PI/3,0,Math.PI/6]].forEach(([r,t,col,op,rx,ry,rz])=>{
+    const m=new THREE.Mesh(new THREE.TorusGeometry(r,t,12,256),
+      new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:op}));
+    m.rotation.set(rx,ry,rz);g.add(m);
+  });
+
+  // Knot
+  const knot=new THREE.Mesh(new THREE.TorusKnotGeometry(1.3,.065,220,24),
+    new THREE.MeshBasicMaterial({color:0x00cc6e,transparent:true,opacity:.22}));
+  g.add(knot);
+
+  // Particles
+  const pPos=new Float32Array(320*3);
+  for(let i=0;i<320;i++){
+    const r=3.2+Math.random()*3;
+    const th=Math.random()*Math.PI*2,ph=Math.acos(2*Math.random()-1);
+    pPos[i*3]=r*Math.sin(ph)*Math.cos(th);
+    pPos[i*3+1]=r*Math.sin(ph)*Math.sin(th);
+    pPos[i*3+2]=r*Math.cos(ph);
+  }
+  const pGeo=new THREE.BufferGeometry();
+  pGeo.setAttribute('position',new THREE.BufferAttribute(pPos,3));
+  g.add(new THREE.Points(pGeo,new THREE.PointsMaterial({color:0x00ff88,size:.022,transparent:true,opacity:.72,depthWrite:false})));
+
+  const [r1,r2,r3]=g.children.filter(o=>o.type==='Mesh'&&o.geometry.type==='TorusGeometry');
+
+  function anim(){
+    g.rotation.y+=.003;g.rotation.x+=.001;
+    if(r1)r1.rotation.z+=.006;
+    if(r2)r2.rotation.x-=.004;
+    if(r3)r3.rotation.y+=.008;
+    knot.rotation.x+=.004;knot.rotation.y-=.003;
+    renderer.render(scene,camera);requestAnimationFrame(anim);
+  }
+  anim();
+})();
+
+// ─── TERMINAL ─────────────────────────────────────────────
+const termEl=document.getElementById('terminal');
+const lines=[
+  {c:'term-line','t':'[SYS]  Relay chain established…'},
+  {c:'term-line active','t':'[AUTH] Zero-trust verification  ✓'},
+  {c:'term-line','t':'[AI]   Neural lattice synchronised'},
+  {c:'term-line warn','t':'[SCAN] Anomaly detected: AS48280'},
+  {c:'term-line active','t':'[RESP] Quarantine deployed 14ms'},
+  {c:'term-line','t':'[CRYP] Key rotation complete'},
+  {c:'term-line err','t':'[WARN] Exfil attempt: suppressed'},
+  {c:'term-line active','t':'[SERAPH] Autonomous  // online'},
+];
+let ti=0;
+function pushTermLine(){
+  if(!termEl)return;
+  const d=document.createElement('div');
+  d.className=lines[ti].c;
+  d.textContent=lines[ti].t;
+  const cur=document.createElement('span');cur.className='term-cursor';
+  d.appendChild(cur);
+  termEl.appendChild(d);
+  while(termEl.children.length>5)termEl.removeChild(termEl.firstChild);
+  termEl.scrollTop=termEl.scrollHeight;
+  ti=(ti+1)%lines.length;
+}
+pushTermLine();setInterval(pushTermLine,1200);
+
+// ─── LIVE ALERTS ──────────────────────────────────────────
+const alertDefs=[
+  {cls:'ok',txt:'Zero-trust verification passed',src:'AUTH'},
+  {cls:'ok',txt:'AES-256 relay sealed',src:'CRYP'},
+  {cls:'warn',txt:'Suspicious beacon: 185.220.x.x',src:'SIGINT'},
+  {cls:'crit',txt:'SQLi attempt blocked — node 7',src:'WAF'},
+  {cls:'ok',txt:'Entropy field stabilised',src:'CORE'},
+  {cls:'warn',txt:'Lateral move attempted',src:'EDR'},
+  {cls:'crit',txt:'Credential spray — 8k req/s',src:'NET'},
+  {cls:'ok',txt:'Deception trap triggered',src:'HONEYP'},
+];
+const alertList=document.getElementById('alertList');
+let ai=0;
+function pushAlert(){
+  if(!alertList)return;
+  const a=alertDefs[Math.floor(Math.random()*alertDefs.length)];
+  const t=new Date();
+  const p=n=>String(n).padStart(2,'0');
+  const time=`${p(t.getUTCHours())}:${p(t.getUTCMinutes())}:${p(t.getUTCSeconds())}`;
+  const el=document.createElement('div');
+  el.className=`alert-item ${a.cls}`;
+  el.innerHTML=`<div class="alert-dot"></div><span class="alert-text">[${a.src}] ${a.txt}</span><span class="alert-time">${time}</span>`;
+  el.style.opacity='0';el.style.transform='translateX(12px)';el.style.transition='opacity .3s,transform .3s';
+  alertList.appendChild(el);
+  requestAnimationFrame(()=>{el.style.opacity='1';el.style.transform='none'});
+  while(alertList.children.length>3)alertList.removeChild(alertList.firstChild);
+}
+pushAlert();setInterval(pushAlert,2200);
+
+// ─── DASHBOARD METRICS ────────────────────────────────────
+let blocked=0,rate=0;
+const bigBlocked=document.getElementById('big-blocked');
+const bigRate=document.getElementById('big-rate');
+const mapCount=document.getElementById('map-count');
+const activeAttacks=document.getElementById('active-attacks');
+
+function updateDash(){
+  blocked+=Math.floor(Math.random()*18+4);
+  rate=Math.floor(Math.random()*90+40);
+  if(bigBlocked)bigBlocked.textContent=blocked.toLocaleString();
+  if(bigRate)bigRate.textContent=`▲ +${rate}/min ingested`;
+  const active=Math.floor(Math.random()*280+120);
+  if(mapCount)mapCount.textContent=`${active} ACTIVE VECTORS`;
+  if(activeAttacks)activeAttacks.textContent=active;
+}
+updateDash();setInterval(updateDash,3000);
+
+// ─── STAT BARS ANIMATION ──────────────────────────────────
+function jitterBars(){
+  const vals=[
+    [42,28,18,12],
+  ].map(()=>[
+    Math.floor(Math.random()*15+36),
+    Math.floor(Math.random()*10+24),
+    Math.floor(Math.random()*8+14),
+    Math.floor(Math.random()*6+9),
+  ])[0];
+  const total=vals.reduce((a,b)=>a+b,0);
+  vals.forEach((v,i)=>{
+    const pct=Math.round(v/total*100);
+    const sv=document.getElementById(`sv${i+1}`);
+    const sb=document.getElementById(`sb${i+1}`);
+    if(sv)sv.textContent=pct+'%';
+    if(sb)sb.style.width=pct+'%';
+  });
+}
+setInterval(jitterBars,4000);
+
+// ─── MINI GRAPH ───────────────────────────────────────────
+const miniGraph=document.getElementById('miniGraph');
+if(miniGraph){
+  const heights=Array.from({length:18},()=>Math.random()*100);
+  heights.forEach(h=>{
+    const b=document.createElement('div');
+    b.className='bar';
+    b.style.height=h+'%';
+    miniGraph.appendChild(b);
+  });
+  setInterval(()=>{
+    Array.from(miniGraph.children).forEach((b,i)=>{
+      b.style.height=(Math.random()*90+10)+'%';
+      b.style.transition='height .5s ease';
+    });
+  },1800);
+}
+
+// ─── PROTOCOL TILES ANIMATION ─────────────────────────────
+const pEntropy=document.getElementById('p-entropy');
+const pLatency=document.getElementById('p-latency');
+const pLoss=document.getElementById('p-loss');
+let ent=98.4,lat=18,loss=.02;
+setInterval(()=>{
+  ent=Math.max(96,Math.min(99.99,ent+(Math.random()-.45)));
+  lat=Math.max(8,Math.min(34,lat+(Math.random()-.5)*3));
+  loss=Math.max(.01,Math.min(.12,loss+(Math.random()-.5)*.01));
+  if(pEntropy)pEntropy.textContent=ent.toFixed(1)+'%';
+  if(pLatency)pLatency.textContent=Math.round(lat)+'ms';
+  if(pLoss)pLoss.textContent=loss.toFixed(2)+'%';
+},2000);
+
+// ─── WORLD MAP (threat dots) ──────────────────────────────
+const worldCanvas=document.getElementById('worldCanvas');
+if(worldCanvas){
+  const wctx=worldCanvas.getContext('2d');
+  const attacks=[];
+  function latLonToXY(lat,lon,w,h){
+    return{x:(lon+180)/360*w,y:(90-lat)/180*h};
+  }
+  const cities=[
+    [51.5,-.09],[40.7,-74],[35.7,139.7],[37.8,-122.4],
+    [-33.9,151.2],[48.8,2.3],[55.7,37.6],[31.2,121.5],
+    [19.4,-99.1],[28.6,77.2],[-23.5,-46.6],[1.3,103.8],
+    [52.5,13.4],[41.9,12.5],[59.9,30.3],[50.1,8.7],
+  ];
+  function spawnAttack(){
+    const src=cities[Math.floor(Math.random()*cities.length)];
+    const dst=cities[Math.floor(Math.random()*cities.length)];
+    attacks.push({
+      slat:src[0],slon:src[1],
+      dlat:dst[0],dlon:dst[1],
+      prog:0,speed:.015+(Math.random()*.01),
+      col:Math.random()>.7?'#ff2d5b':Math.random()>.5?'#ffaa00':'#00ff88',
+    });
+  }
+  for(let i=0;i<6;i++)spawnAttack();
+  setInterval(spawnAttack,1200);
+
+  function drawWorld(){
+    const W=worldCanvas.clientWidth,H=worldCanvas.clientHeight;
+    if(worldCanvas.width!==W||worldCanvas.height!==H){
+      worldCanvas.width=W;worldCanvas.height=H;
+    }
+    wctx.clearRect(0,0,W,H);
+
+    // grid
+    wctx.strokeStyle='rgba(0,255,136,.06)';wctx.lineWidth=1;
+    for(let x=0;x<W;x+=W/12){wctx.beginPath();wctx.moveTo(x,0);wctx.lineTo(x,H);wctx.stroke()}
+    for(let y=0;y<H;y+=H/6){wctx.beginPath();wctx.moveTo(0,y);wctx.lineTo(W,y);wctx.stroke()}
+
+    // city dots
+    cities.forEach(([lat,lon])=>{
+      const{x,y}=latLonToXY(lat,lon,W,H);
+      wctx.beginPath();wctx.arc(x,y,2.5,0,Math.PI*2);
+      wctx.fillStyle='rgba(0,255,136,.5)';wctx.fill();
+      wctx.beginPath();wctx.arc(x,y,5,0,Math.PI*2);
+      wctx.strokeStyle='rgba(0,255,136,.15)';wctx.lineWidth=1;wctx.stroke();
     });
 
-    window.addEventListener('pointerleave', () => {
-      pointer.active = false;
-      shell.style.transform = 'none';
-    });
+    // attack arcs
+    attacks.forEach((a,idx)=>{
+      a.prog+=a.speed;
+      const{x:sx,y:sy}=latLonToXY(a.slat,a.slon,W,H);
+      const{x:dx,y:dy}=latLonToXY(a.dlat,a.dlon,W,H);
+      const mx=(sx+dx)/2,my=(sy+dy)/2-Math.hypot(dx-sx,dy-sy)*.38;
 
-    function animateThree(){
-      if(!reduceMotion){
-        group.rotation.y += 0.0032;
-        group.rotation.x += 0.0011;
+      const t=Math.min(a.prog,1);
+      const pt=(u)=>({
+        x:(1-u)**2*sx+2*(1-u)*u*mx+u**2*dx,
+        y:(1-u)**2*sy+2*(1-u)*u*my+u**2*dy,
+      });
 
-        if(pointer.active){
-          target.x += (pointer.x * 0.18 - target.x) * 0.05;
-          target.y += (-pointer.y * 0.16 - target.y) * 0.05;
-        }else{
-          target.x *= 0.94;
-          target.y *= 0.94;
-        }
-
-        group.rotation.y += target.x * 0.0025;
-        group.rotation.x += target.y * 0.0025;
-
-        coreMesh.rotation.z += 0.0022;
-        wireMesh.rotation.z -= 0.0018;
-        ring1.rotation.z += 0.007;
-        ring2.rotation.x -= 0.005;
-        halo.rotation.y += 0.009;
-        knot.rotation.x += 0.004;
-        knot.rotation.y -= 0.003;
+      wctx.beginPath();
+      for(let u=0;u<=t;u+=.02){
+        const p=pt(u);
+        u===0?wctx.moveTo(p.x,p.y):wctx.lineTo(p.x,p.y);
       }
+      wctx.strokeStyle=a.col.replace(')',','+(.6*(1-t*.3))+')').replace('rgb','rgba').replace('#','');
 
-      renderer.render(scene, camera);
-      requestAnimationFrame(animateThree);
-    }
-    animateThree();
+      // simple hex to rgba
+      const hex=a.col.slice(1);
+      const r=parseInt(hex.slice(0,2),16),g2=parseInt(hex.slice(2,4),16),b=parseInt(hex.slice(4,6),16);
+      wctx.strokeStyle=`rgba(${r},${g2},${b},${.7*(1-t*.3)})`;
+      wctx.lineWidth=1.2;wctx.stroke();
 
-    // Background lattice
-    const bg = document.getElementById('bgCanvas');
-    const bctx = bg.getContext('2d', { alpha:true });
-    let bw = 0, bh = 0;
-    const bgParticles = [];
-    const bgCount = reduceMotion ? 0 : (isMobile ? 54 : 128);
+      // head dot
+      const head=pt(t);
+      wctx.beginPath();wctx.arc(head.x,head.y,2,0,Math.PI*2);
+      wctx.fillStyle=a.col;wctx.fill();
 
-    function resizeBg(){
-      const dpr = Math.min(window.devicePixelRatio || 1, isMobile ? 1.2 : 1.6);
-      bw = bg.width = Math.floor(window.innerWidth * dpr);
-      bh = bg.height = Math.floor(window.innerHeight * dpr);
-      bg.style.width = window.innerWidth + 'px';
-      bg.style.height = window.innerHeight + 'px';
-      bctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    }
-
-    function initBgParticles(){
-      bgParticles.length = 0;
-      for(let i=0;i<bgCount;i++){
-        bgParticles.push({
-          x:Math.random()*window.innerWidth,
-          y:Math.random()*window.innerHeight,
-          vx:(Math.random()-.5)*(isMobile ? 0.22 : 0.34),
-          vy:(Math.random()-.5)*(isMobile ? 0.22 : 0.34),
-          r:Math.random()*(isMobile ? 1.2 : 1.8)+0.4
-        });
-      }
-    }
-
-    resizeBg();
-    initBgParticles();
-    window.addEventListener('resize', () => {
-      resizeBg();
-      initBgParticles();
+      if(a.prog>=1){attacks.splice(idx,1)}
     });
+    requestAnimationFrame(drawWorld);
+  }
+  drawWorld();
+}
 
-    const mouse = { x:0, y:0, active:false };
-    window.addEventListener('pointermove', (e) => {
-      mouse.x = e.clientX;
-      mouse.y = e.clientY;
-      mouse.active = true;
-    });
-    window.addEventListener('pointerleave', () => { mouse.active = false; });
-
-    function drawBg(){
-      bctx.clearRect(0,0,window.innerWidth,window.innerHeight);
-
-      if(!reduceMotion){
-        for(let i=0;i<bgParticles.length;i++){
-          const p = bgParticles[i];
-          p.x += p.vx;
-          p.y += p.vy;
-
-          if(p.x < -20) p.x = window.innerWidth + 20;
-          if(p.x > window.innerWidth + 20) p.x = -20;
-          if(p.y < -20) p.y = window.innerHeight + 20;
-          if(p.y > window.innerHeight + 20) p.y = -20;
-
-          const mdx = mouse.x - p.x;
-          const mdy = mouse.y - p.y;
-          const md = Math.hypot(mdx, mdy);
-          const nearMouse = mouse.active && md < 180;
-
-          for(let j=i+1;j<bgParticles.length;j++){
-            const q = bgParticles[j];
-            const dx = p.x - q.x;
-            const dy = p.y - q.y;
-            const d = Math.hypot(dx, dy);
-            if(d < (isMobile ? 90 : 140)){
-              bctx.beginPath();
-              bctx.moveTo(p.x, p.y);
-              bctx.lineTo(q.x, q.y);
-              bctx.strokeStyle = `rgba(0,255,153,${(1 - d / (isMobile ? 90 : 140)) * 0.08})`;
-              bctx.lineWidth = 1;
-              bctx.stroke();
-            }
-          }
-
-          bctx.beginPath();
-          bctx.arc(p.x, p.y, nearMouse ? p.r + 1.2 : p.r, 0, Math.PI*2);
-          bctx.fillStyle = nearMouse ? 'rgba(0,255,153,.72)' : 'rgba(0,255,153,.42)';
-          bctx.fill();
-        }
-      }
-
-      requestAnimationFrame(drawBg);
+// ─── SCROLL REVEAL ────────────────────────────────────────
+const reveals=document.querySelectorAll('.feature-card,.stat-block,.big-stat,.proto-item,.proto-tile');
+const observer=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{
+    if(e.isIntersecting){
+      e.target.style.opacity='1';
+      e.target.style.transform='translateY(0)';
     }
-    drawBg();
-
-    // Ambient audio
-    const audioToggle = document.createElement('button');
-    audioToggle.className = 'btn secondary';
-    audioToggle.textContent = 'Enable audio';
-    audioToggle.style.marginTop = '12px';
-    document.querySelector('.hero-actions').appendChild(audioToggle);
-
-    let audioCtx = null;
-    let audioNodes = null;
-    let audioOn = false;
-
-    function startAudio(){
-      if(audioOn) return;
-      const AC = window.AudioContext || window.webkitAudioContext;
-      if(!AC) return;
-
-      audioCtx = audioCtx || new AC();
-      const master = audioCtx.createGain();
-      master.gain.value = 0.025;
-
-      const filter = audioCtx.createBiquadFilter();
-      filter.type = 'lowpass';
-      filter.frequency.value = 260;
-      filter.Q.value = 0.8;
-
-      const osc1 = audioCtx.createOscillator();
-      osc1.type = 'sine';
-      osc1.frequency.value = 42;
-
-      const osc2 = audioCtx.createOscillator();
-      osc2.type = 'triangle';
-      osc2.frequency.value = 78;
-
-      const lfo = audioCtx.createOscillator();
-      lfo.type = 'sine';
-      lfo.frequency.value = 0.12;
-
-      const lfoGain = audioCtx.createGain();
-      lfoGain.gain.value = 0.012;
-
-      lfo.connect(lfoGain);
-      lfoGain.connect(master.gain);
-
-      osc1.connect(filter);
-      osc2.connect(filter);
-      filter.connect(master);
-      master.connect(audioCtx.destination);
-
-      osc1.start();
-      osc2.start();
-      lfo.start();
-
-      audioNodes = { osc1, osc2, lfo, master };
-      audioOn = true;
-      audioToggle.textContent = 'Disable audio';
-    }
-
-    function stopAudio(){
-      if(!audioOn || !audioNodes) return;
-      const { osc1, osc2, lfo, master } = audioNodes;
-      try{ osc1.stop(); }catch(e){}
-      try{ osc2.stop(); }catch(e){}
-      try{ lfo.stop(); }catch(e){}
-      try{ master.disconnect(); }catch(e){}
-      audioNodes = null;
-      audioOn = false;
-      audioToggle.textContent = 'Enable audio';
-    }
-
-    audioToggle.addEventListener('click', async () => {
-      if(!audioOn){
-        startAudio();
-        if(audioCtx && audioCtx.state === 'suspended'){
-          try{ await audioCtx.resume(); }catch(e){}
-        }
-      }else{
-        stopAudio();
-      }
-    });
-  </script>
+  });
+},{threshold:.12});
+reveals.forEach(el=>{
+  el.style.opacity='0';
+  el.style.transform='translateY(22px)';
+  el.style.transition='opacity .6s ease,transform .6s ease';
+  observer.observe(el);
+});
+</script>
 </body>
 </html>
