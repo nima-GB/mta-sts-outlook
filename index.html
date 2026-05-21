@@ -10,6 +10,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;800&family=IBM+Plex+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
 
+  <script src="https://cdn.jsdelivr.net/npm/three@0.184.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@observablehq/plot@0.6/dist/plot.umd.min.js"></script>
+
   <style>
     :root{
       --bg:#020403;
@@ -26,7 +29,7 @@
       --warn:#ffd24d;
       --shadow:0 0 40px rgba(0,255,153,.12);
       --radius:18px;
-      --max:1440px;
+      --max:1500px;
     }
 
     *{ box-sizing:border-box; }
@@ -128,7 +131,7 @@
 
     .shell{
       width:min(var(--max), 100%);
-      min-height:min(92vh, 1120px);
+      min-height:min(94vh, 1180px);
       border:1px solid var(--line);
       border-radius:28px;
       overflow:hidden;
@@ -141,6 +144,8 @@
         0 0 60px rgba(0,255,153,.10),
         inset 0 0 80px rgba(0,255,153,.04);
       backdrop-filter: blur(12px);
+      transform-style:preserve-3d;
+      transition:transform .12s ease-out;
     }
 
     .shell::before{
@@ -235,6 +240,7 @@
       letter-spacing:.25em;
       text-transform:uppercase;
       white-space:nowrap;
+      box-shadow:0 0 18px rgba(0,255,153,.08);
     }
 
     .clockline{
@@ -249,9 +255,9 @@
       position:relative;
       z-index:3;
       display:grid;
-      grid-template-columns: minmax(0, 1.1fr) minmax(340px, .9fr);
+      grid-template-columns:minmax(0, 1.15fr) minmax(360px, .85fr);
       gap:24px;
-      padding:24px 30px 30px;
+      padding:24px 30px 24px;
       align-items:stretch;
     }
 
@@ -276,6 +282,7 @@
       font-size:.76rem;
       letter-spacing:.28em;
       text-transform:uppercase;
+      box-shadow:0 0 18px rgba(0,255,153,.06);
     }
 
     .eyebrow::before{
@@ -291,8 +298,8 @@
     .hero h1{
       margin:0;
       font-family:"Orbitron", sans-serif;
-      font-size:clamp(2.4rem, 5vw, 5.7rem);
-      line-height:.95;
+      font-size:clamp(2.5rem, 5.3vw, 6rem);
+      line-height:.92;
       letter-spacing:.08em;
       text-transform:uppercase;
       color:#f4fff8;
@@ -304,14 +311,14 @@
     .hero h1 span{
       display:block;
       color:var(--neon);
-      text-shadow:0 0 20px rgba(0,255,153,.44);
+      text-shadow:0 0 22px rgba(0,255,153,.48), 0 0 42px rgba(0,255,153,.20);
     }
 
     .hero p{
       max-width:68ch;
       margin:0;
-      font-size:clamp(.95rem, 1.1vw, 1.05rem);
-      line-height:1.85;
+      font-size:clamp(.95rem, 1.05vw, 1.05rem);
+      line-height:1.9;
       color:#cbeede;
     }
 
@@ -319,7 +326,7 @@
       display:flex;
       gap:14px;
       flex-wrap:wrap;
-      margin-top:8px;
+      margin-top:6px;
     }
 
     .btn{
@@ -335,7 +342,7 @@
       color:#01120b;
       background:linear-gradient(180deg, rgba(0,255,153,1), rgba(0,220,132,1));
       box-shadow:0 0 18px rgba(0,255,153,.22);
-      transition:transform .18s ease, box-shadow .18s ease, filter .18s ease;
+      transition:transform .18s ease, box-shadow .18s ease, filter .18s ease, background .18s ease;
     }
 
     .btn:hover{
@@ -397,6 +404,19 @@
       border-radius:16px;
       background:rgba(0,0,0,.16);
       border:1px solid rgba(0,255,153,.08);
+      position:relative;
+      overflow:hidden;
+    }
+
+    .stat::after{
+      content:"";
+      position:absolute;
+      inset:auto -40% -40% auto;
+      width:120px;
+      height:120px;
+      border-radius:50%;
+      background:radial-gradient(circle, rgba(0,255,153,.14), transparent 68%);
+      pointer-events:none;
     }
 
     .stat label{
@@ -411,19 +431,56 @@
     .stat strong{
       display:block;
       font-family:"Orbitron", sans-serif;
-      font-size:1.2rem;
+      font-size:1.18rem;
       letter-spacing:.08em;
       color:var(--neon);
       text-shadow:0 0 14px rgba(0,255,153,.26);
     }
 
-    .split{
+    .audio-row{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      justify-content:space-between;
+      margin-top:14px;
+      padding-top:14px;
+      border-top:1px solid rgba(0,255,153,.08);
+    }
+
+    .audio-text{
+      font-size:.75rem;
+      color:var(--muted);
+      letter-spacing:.18em;
+      text-transform:uppercase;
+      line-height:1.4;
+    }
+
+    .tiny-btn{
+      border:1px solid rgba(0,255,153,.18);
+      background:rgba(0,255,153,.05);
+      color:var(--neon);
+      padding:10px 12px;
+      border-radius:12px;
+      font-family:"Orbitron", sans-serif;
+      font-size:.7rem;
+      letter-spacing:.16em;
+      text-transform:uppercase;
+      cursor:pointer;
+      box-shadow:0 0 14px rgba(0,255,153,.06);
+    }
+
+    .tiny-btn:hover{
+      background:rgba(0,255,153,.08);
+    }
+
+    .grid-layout{
       position:relative;
       z-index:3;
       display:grid;
-      grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr);
-      gap:24px;
+      grid-template-columns:repeat(12, minmax(0, 1fr));
+      gap:18px;
       padding:0 30px 30px;
+      align-items:stretch;
     }
 
     .panel{
@@ -434,9 +491,23 @@
       overflow:hidden;
       position:relative;
       min-height:100%;
+      backdrop-filter:blur(8px);
+    }
+
+    .panel::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      pointer-events:none;
+      background:
+        linear-gradient(135deg, rgba(255,255,255,.05), transparent 26%),
+        radial-gradient(circle at 50% 0%, rgba(0,255,153,.08), transparent 42%);
+      opacity:.6;
     }
 
     .panel-header{
+      position:relative;
+      z-index:1;
       padding:18px 18px 14px;
       border-bottom:1px solid rgba(0,255,153,.08);
       display:flex;
@@ -446,12 +517,86 @@
       font-family:"Orbitron", sans-serif;
       letter-spacing:.24em;
       text-transform:uppercase;
-      font-size:.76rem;
+      font-size:.74rem;
       color:var(--neon);
     }
 
     .panel-body{
+      position:relative;
+      z-index:1;
       padding:18px;
+    }
+
+    .span-7{ grid-column:span 7; }
+    .span-5{ grid-column:span 5; }
+    .span-6{ grid-column:span 6; }
+    .span-8{ grid-column:span 8; }
+    .span-4{ grid-column:span 4; }
+    .span-12{ grid-column:span 12; }
+
+    .three-stage{
+      position:relative;
+      min-height:520px;
+      border-radius:22px;
+      background:
+        radial-gradient(circle at 50% 40%, rgba(0,255,153,.16), transparent 26%),
+        radial-gradient(circle at 50% 50%, rgba(0,255,153,.08), transparent 42%),
+        linear-gradient(180deg, rgba(0,0,0,.12), rgba(0,0,0,.36));
+      border:1px solid rgba(0,255,153,.11);
+      overflow:hidden;
+    }
+
+    .three-stage::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      pointer-events:none;
+      background:
+        linear-gradient(180deg, transparent, rgba(0,255,153,.05), transparent),
+        repeating-linear-gradient(
+          to bottom,
+          rgba(255,255,255,0.015) 0px,
+          rgba(255,255,255,0.015) 1px,
+          transparent 2px,
+          transparent 5px
+        );
+      opacity:.75;
+    }
+
+    #threeStage{
+      position:absolute;
+      inset:0;
+    }
+
+    .three-labels{
+      position:absolute;
+      left:18px;
+      right:18px;
+      bottom:18px;
+      display:flex;
+      justify-content:space-between;
+      gap:14px;
+      align-items:flex-end;
+      pointer-events:none;
+      z-index:2;
+    }
+
+    .three-labels .left,
+    .three-labels .right{
+      font-size:.72rem;
+      letter-spacing:.18em;
+      text-transform:uppercase;
+      color:var(--muted);
+      line-height:1.5;
+    }
+
+    .three-labels .right{
+      text-align:right;
+    }
+
+    .mini-grid{
+      display:grid;
+      gap:12px;
     }
 
     .metric-list{
@@ -488,8 +633,27 @@
       color:var(--danger);
     }
 
+    .telemetry-host{
+      display:grid;
+      gap:16px;
+    }
+
+    .plot{
+      min-height:180px;
+      border-radius:18px;
+      border:1px solid rgba(0,255,153,.08);
+      background:rgba(0,0,0,.14);
+      overflow:hidden;
+    }
+
+    .plot svg{
+      display:block;
+      width:100%;
+      height:auto;
+    }
+
     .terminal{
-      height:220px;
+      height:330px;
       overflow:auto;
       font-size:.9rem;
       line-height:1.75;
@@ -549,6 +713,24 @@
       height:100%;
     }
 
+    .map .gridline{
+      stroke:rgba(0,255,153,.08);
+      stroke-width:1;
+      stroke-dasharray:4 7;
+    }
+
+    .map .route{
+      stroke:rgba(0,255,153,.55);
+      stroke-width:1.8;
+      stroke-dasharray:10 9;
+      animation: dash 3.6s linear infinite;
+      fill:none;
+    }
+
+    @keyframes dash{
+      to{ stroke-dashoffset:-120; }
+    }
+
     .map .node{
       fill:#00ff99;
       filter:drop-shadow(0 0 8px rgba(0,255,153,.8));
@@ -559,15 +741,14 @@
       animation-delay:1s;
     }
 
-    .map .line{
-      stroke:rgba(0,255,153,.45);
-      stroke-width:1.6;
-      stroke-dasharray:9 8;
-      animation: dash 3.6s linear infinite;
+    .map .node.blue{
+      fill:#4ad8ff;
+      filter:drop-shadow(0 0 8px rgba(74,216,255,.8));
     }
 
-    @keyframes dash{
-      to{ stroke-dashoffset:-80; }
+    .map .node.red{
+      fill:#ff4d8a;
+      filter:drop-shadow(0 0 8px rgba(255,77,138,.8));
     }
 
     @keyframes pulseNode{
@@ -586,70 +767,41 @@
       color:var(--muted);
     }
 
-    .core{
-      position:absolute;
-      left:50%;
-      top:50%;
-      width:min(24vw, 360px);
-      aspect-ratio:1;
-      transform:translate(-50%,-50%);
-      border-radius:50%;
-      pointer-events:none;
-      z-index:2;
-      opacity:.95;
+    .section-title{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+      font-family:"Orbitron", sans-serif;
+      color:var(--neon);
+      text-transform:uppercase;
+      letter-spacing:.2em;
+      font-size:.74rem;
+      margin-bottom:14px;
     }
 
-    .ring{
-      position:absolute;
-      inset:0;
-      border-radius:50%;
-      border:1px solid rgba(0,255,153,.18);
-      box-shadow:0 0 28px rgba(0,255,153,.08), inset 0 0 40px rgba(0,255,153,.05);
-      animation: spin 24s linear infinite;
+    .status-box{
+      display:grid;
+      gap:12px;
     }
 
-    .ring.r2{
-      inset:14%;
-      animation-duration:18s;
-      animation-direction:reverse;
+    .status-row{
+      display:flex;
+      justify-content:space-between;
+      gap:14px;
+      padding:12px 14px;
+      border-radius:14px;
+      border:1px solid rgba(0,255,153,.08);
+      background:rgba(0,255,153,.04);
+      font-size:.9rem;
     }
 
-    .ring.r3{
-      inset:28%;
-      animation-duration:13s;
+    .status-row .value{
+      color:var(--neon);
     }
 
-    .core-glow{
-      position:absolute;
-      inset:36%;
-      border-radius:50%;
-      background:radial-gradient(circle, rgba(0,255,153,1), rgba(0,255,153,.18), transparent 72%);
-      filter:blur(12px);
-      animation: pulseCore 2.8s ease-in-out infinite;
-    }
-
-    .core-halo{
-      position:absolute;
-      inset:44%;
-      border-radius:50%;
-      border:1px solid rgba(0,255,153,.36);
-      box-shadow:0 0 22px rgba(0,255,153,.22);
-      animation: pulseHalo 4.2s ease-in-out infinite;
-    }
-
-    @keyframes spin{
-      from{ transform:rotate(0deg); }
-      to{ transform:rotate(360deg); }
-    }
-
-    @keyframes pulseCore{
-      0%,100%{ transform:scale(.92); opacity:.55; }
-      50%{ transform:scale(1.15); opacity:1; }
-    }
-
-    @keyframes pulseHalo{
-      0%,100%{ transform:scale(.95); opacity:.6; }
-      50%{ transform:scale(1.05); opacity:1; }
+    .status-row .value.warn{
+      color:var(--warn);
     }
 
     .footer{
@@ -677,22 +829,22 @@
       background:linear-gradient(90deg, transparent, rgba(0,255,153,.24), transparent);
     }
 
-    .mobile-note{
-      display:none;
-    }
-
-    @media (max-width: 1100px){
+    @media (max-width: 1180px){
       .hero,
-      .split{
-        grid-template-columns:1fr;
+      .grid-layout{
+        grid-template-columns:repeat(12, minmax(0, 1fr));
       }
 
-      .core{
-        width:min(44vw, 320px);
+      .span-7,
+      .span-5,
+      .span-6,
+      .span-8,
+      .span-4{
+        grid-column:1 / -1;
       }
 
-      .status{
-        min-width:0;
+      .shell{
+        min-height:auto;
       }
     }
 
@@ -716,13 +868,15 @@
       .status{
         align-items:flex-start;
         text-align:left;
+        min-width:0;
       }
 
       .hero{
-        padding:16px 16px 18px;
+        padding:16px;
+        grid-template-columns:1fr;
       }
 
-      .split{
+      .grid-layout{
         padding:0 16px 16px;
       }
 
@@ -744,12 +898,16 @@
         grid-template-columns:1fr;
       }
 
-      .core{
-        width:min(64vw, 260px);
+      .three-stage{
+        min-height:300px;
       }
 
       .terminal{
-        height:180px;
+        height:220px;
+      }
+
+      .map{
+        aspect-ratio:16/11;
       }
     }
 
@@ -790,7 +948,7 @@
         </div>
       </header>
 
-      <div class="hero">
+      <section class="hero">
         <div class="hero-copy">
           <div class="eyebrow">Classified synthetic intelligence layer</div>
           <h1>
@@ -798,7 +956,7 @@
             <span>command experience</span>
           </h1>
           <p>
-            Built to feel like a live defence environment: entropy fields, predictive analytics, signal telemetry, encrypted relay states, and a central AI core with controlled motion. The layout is responsive from desktop to mobile and avoids fragile visual clutter.
+            A cinematic landing page built from layered telemetry, adaptive threat mapping, holographic geometry, and live data-science style visualisation. It keeps the interface sharp on desktop and still behaves cleanly on mobile.
           </p>
 
           <div class="actions">
@@ -817,20 +975,28 @@
               <div class="stat-grid">
                 <div class="stat">
                   <label>Entropy field</label>
-                  <strong>98.41%</strong>
+                  <strong id="entropyVal">98.41%</strong>
                 </div>
                 <div class="stat">
                   <label>Signal integrity</label>
-                  <strong>STABLE</strong>
+                  <strong id="integrityVal">STABLE</strong>
                 </div>
                 <div class="stat">
                   <label>AI cognition</label>
-                  <strong>ACTIVE</strong>
+                  <strong id="cognitionVal">ACTIVE</strong>
                 </div>
                 <div class="stat">
                   <label>Perimeter state</label>
-                  <strong>SEALED</strong>
+                  <strong id="perimeterVal">SEALED</strong>
                 </div>
+              </div>
+
+              <div class="audio-row">
+                <div class="audio-text">
+                  Ambient drone layer<br>
+                  user-initiated only
+                </div>
+                <button class="tiny-btn" id="audioToggle" type="button">Enable audio</button>
               </div>
             </div>
           </div>
@@ -847,28 +1013,57 @@
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      <div class="core" aria-hidden="true">
-        <div class="ring"></div>
-        <div class="ring r2"></div>
-        <div class="ring r3"></div>
-        <div class="core-glow"></div>
-        <div class="core-halo"></div>
-      </div>
+      <div class="grid-layout">
 
-      <div class="split">
-        <section class="panel">
+        <article class="panel span-7">
           <div class="panel-header">
-            <span>Live telemetry</span>
-            <span>stream // 01</span>
+            <span>Holographic core</span>
+            <span>WebGL / live</span>
           </div>
           <div class="panel-body">
-            <div class="terminal" id="terminal" aria-live="polite"></div>
+            <div class="three-stage">
+              <div id="threeStage"></div>
+              <div class="three-labels">
+                <div class="left">
+                  quantum relay stabilised<br>
+                  adaptive geometry engaged
+                </div>
+                <div class="right">
+                  signal depth: ultra<br>
+                  latency: low / locked
+                </div>
+              </div>
+            </div>
           </div>
-        </section>
+        </article>
 
-        <section class="panel">
+        <article class="panel span-5">
+          <div class="panel-header">
+            <span>Operational status</span>
+            <span>telemetry // 12</span>
+          </div>
+          <div class="panel-body">
+            <div class="status-box">
+              <div class="status-row"><span>Threat surface</span><span class="value" id="surfaceVal">MINIMISED</span></div>
+              <div class="status-row"><span>System latency</span><span class="value" id="latencyVal">21 ms</span></div>
+              <div class="status-row"><span>Relay confidence</span><span class="value" id="confidenceVal">99.8%</span></div>
+              <div class="status-row"><span>Signal loss</span><span class="value warn" id="lossVal">0.04%</span></div>
+              <div class="status-row"><span>Adaptive response</span><span class="value" id="responseVal">ONLINE</span></div>
+            </div>
+          </div>
+        </article>
+
+        <article class="panel span-6">
+          <div class="panel-header">
+            <span>Telemetry analytics</span>
+            <span>Observable Plot</span>
+          </div>
+          <div class="panel-body telemetry-host" id="telemetryHost"></div>
+        </article>
+
+        <article class="panel span-6">
           <div class="panel-header">
             <span>Dynamic threat map</span>
             <span>sector grid // 04</span>
@@ -884,23 +1079,33 @@
                   </linearGradient>
                 </defs>
 
-                <path class="line" d="M100 420 C180 300, 260 250, 355 260 S530 340, 650 210 S830 110, 910 160" fill="none" />
-                <path class="line" d="M165 145 C260 210, 335 230, 420 190 S610 70, 730 150 S860 280, 935 340" fill="none" />
-                <path class="line" d="M130 560 C240 480, 350 475, 460 500 S650 560, 760 470 S880 390, 940 455" fill="none" />
+                <path class="gridline" d="M0 120 H1000"></path>
+                <path class="gridline" d="M0 240 H1000"></path>
+                <path class="gridline" d="M0 360 H1000"></path>
+                <path class="gridline" d="M0 480 H1000"></path>
+                <path class="gridline" d="M170 0 V640"></path>
+                <path class="gridline" d="M340 0 V640"></path>
+                <path class="gridline" d="M510 0 V640"></path>
+                <path class="gridline" d="M680 0 V640"></path>
+                <path class="gridline" d="M850 0 V640"></path>
 
-                <circle class="node" cx="100" cy="420" r="9"></circle>
+                <path class="route" d="M90 450 C180 300, 260 250, 355 260 S530 340, 650 210 S830 110, 910 160" fill="none" />
+                <path class="route" d="M160 165 C260 220, 340 235, 420 190 S610 70, 730 150 S860 280, 935 340" fill="none" />
+                <path class="route" d="M120 560 C240 470, 350 475, 460 500 S650 560, 760 470 S880 390, 940 455" fill="none" />
+
+                <circle class="node" cx="90" cy="450" r="9"></circle>
                 <circle class="node delay" cx="355" cy="260" r="10"></circle>
                 <circle class="node" cx="650" cy="210" r="11"></circle>
-                <circle class="node delay" cx="910" cy="160" r="9"></circle>
+                <circle class="node delay blue" cx="910" cy="160" r="9"></circle>
 
-                <circle class="node" cx="165" cy="145" r="8"></circle>
+                <circle class="node blue" cx="160" cy="165" r="8"></circle>
                 <circle class="node delay" cx="420" cy="190" r="10"></circle>
-                <circle class="node" cx="730" cy="150" r="9"></circle>
-                <circle class="node delay" cx="935" cy="340" r="10"></circle>
+                <circle class="node blue" cx="730" cy="150" r="9"></circle>
+                <circle class="node delay red" cx="935" cy="340" r="10"></circle>
 
-                <circle class="node" cx="130" cy="560" r="8"></circle>
+                <circle class="node" cx="120" cy="560" r="8"></circle>
                 <circle class="node delay" cx="460" cy="500" r="10"></circle>
-                <circle class="node" cx="760" cy="470" r="9"></circle>
+                <circle class="node blue" cx="760" cy="470" r="9"></circle>
                 <circle class="node delay" cx="940" cy="455" r="8"></circle>
               </svg>
             </div>
@@ -910,7 +1115,34 @@
               <span>Adaptive response enabled</span>
             </div>
           </div>
-        </section>
+        </article>
+
+        <article class="panel span-8">
+          <div class="panel-header">
+            <span>Live telemetry feed</span>
+            <span>sigint // streaming</span>
+          </div>
+          <div class="panel-body">
+            <div class="terminal" id="terminal" aria-live="polite"></div>
+          </div>
+        </article>
+
+        <article class="panel span-4">
+          <div class="panel-header">
+            <span>Response matrix</span>
+            <span>encrypted</span>
+          </div>
+          <div class="panel-body">
+            <div class="metric-list">
+              <div class="metric-row"><span>Packet inspection</span><span>PASSIVE</span></div>
+              <div class="metric-row"><span>Key exchange</span><span>VALID</span></div>
+              <div class="metric-row"><span>Threat suppression</span><span>AGGRESSIVE</span></div>
+              <div class="metric-row"><span>AI uncertainty</span><span class="warn">LOW</span></div>
+              <div class="metric-row"><span>Command authority</span><span>LOCAL</span></div>
+            </div>
+          </div>
+        </article>
+
       </div>
 
       <div class="glow-line"></div>
@@ -923,6 +1155,10 @@
   </main>
 
   <script>
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const isMobile = window.matchMedia('(max-width: 760px)').matches;
+    const shell = document.querySelector('.shell');
+
     // Clock
     const clockline = document.getElementById('clockline');
     function tickClock() {
@@ -933,19 +1169,61 @@
     tickClock();
     setInterval(tickClock, 1000);
 
+    // Live metric values
+    const entropyVal = document.getElementById('entropyVal');
+    const integrityVal = document.getElementById('integrityVal');
+    const cognitionVal = document.getElementById('cognitionVal');
+    const perimeterVal = document.getElementById('perimeterVal');
+    const surfaceVal = document.getElementById('surfaceVal');
+    const latencyVal = document.getElementById('latencyVal');
+    const confidenceVal = document.getElementById('confidenceVal');
+    const lossVal = document.getElementById('lossVal');
+    const responseVal = document.getElementById('responseVal');
+
+    let entropy = 98.4;
+    let latency = 21;
+    let confidence = 99.8;
+    let loss = 0.04;
+    let responseFlip = false;
+
+    function clamp(v, min, max) {
+      return Math.max(min, Math.min(max, v));
+    }
+
+    function updateMetrics(){
+      entropy = clamp(entropy + (Math.random() - 0.45) * 1.1, 96.8, 99.96);
+      latency = clamp(latency + (Math.random() - 0.5) * 3.5, 8, 32);
+      confidence = clamp(confidence + (Math.random() - 0.48) * 0.15, 99.1, 99.99);
+      loss = clamp(loss + (Math.random() - 0.5) * 0.01, 0.01, 0.12);
+      responseFlip = !responseFlip;
+
+      entropyVal.textContent = `${entropy.toFixed(2)}%`;
+      integrityVal.textContent = confidence > 99.4 ? 'STABLE' : 'MONITOR';
+      cognitionVal.textContent = responseFlip ? 'ACTIVE' : 'PREDICTIVE';
+      perimeterVal.textContent = responseFlip ? 'SEALED' : 'LOCKED';
+      surfaceVal.textContent = responseFlip ? 'MINIMISED' : 'CONTAINED';
+      latencyVal.textContent = `${Math.round(latency)} ms`;
+      confidenceVal.textContent = `${confidence.toFixed(2)}%`;
+      lossVal.textContent = `${loss.toFixed(2)}%`;
+      responseVal.textContent = responseFlip ? 'ONLINE' : 'READY';
+    }
+
+    updateMetrics();
+    setInterval(updateMetrics, 2200);
+
     // Terminal feed
     const terminal = document.getElementById('terminal');
     const feed = [
       "[SYS] Establishing encrypted relay chain...",
       "[AI] Neural lattice synchronised.",
-      "[CORE] Entropy stabilised.",
+      "[CORE] Quantum entropy stabilised.",
       "[SCAN] Hostile surface vectors under review.",
       "[AUTH] Zero-trust verification complete.",
       "[NET] Segmented mesh active.",
       "[CRYPTO] AES-256 channel sealed.",
       "[AI] Predictive threat modelling engaged.",
       "[SIGINT] Passive signal collection online.",
-      "[SERAPH] Cognitive response loop initialised."
+      "[SERAPH] Autonomous intelligence initialised."
     ];
 
     let feedIndex = 0;
@@ -965,122 +1243,441 @@
 
       feedIndex = (feedIndex + 1) % feed.length;
 
-      while (terminal.children.length > 8) {
+      while (terminal.children.length > 9) {
         terminal.removeChild(terminal.firstChild);
       }
     }
 
     pushTerminalLine();
-    setInterval(pushTerminalLine, 1150);
+    setInterval(pushTerminalLine, 1050);
 
-    // Background particles with mobile optimisation
-    const canvas = document.getElementById('bgCanvas');
-    const ctx = canvas.getContext('2d', { alpha: true });
+    // Observable Plot telemetry
+    const telemetryHost = document.getElementById('telemetryHost');
+    let phase = 0;
 
-    let w = 0, h = 0;
-    let particles = [];
-    let mouse = { x: 0, y: 0, active: false };
-    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const isMobile = matchMedia('(max-width: 760px)').matches;
-    const count = reducedMotion ? 0 : (isMobile ? 56 : 132);
-
-    function resize() {
-      const dpr = Math.min(window.devicePixelRatio || 1, isMobile ? 1.2 : 1.6);
-      w = canvas.width = Math.floor(innerWidth * dpr);
-      h = canvas.height = Math.floor(innerHeight * dpr);
-      canvas.style.width = innerWidth + 'px';
-      canvas.style.height = innerHeight + 'px';
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    function series(count, base, amp, noise, speed, drift = 0) {
+      return Array.from({ length: count }, (_, i) => {
+        const wave = Math.sin((i + phase) / speed) * amp;
+        const n = (Math.random() - 0.5) * noise;
+        return { t: i, value: base + wave + n + drift };
+      });
     }
 
-    function createParticles() {
-      particles = Array.from({ length: count }, () => ({
-        x: Math.random() * innerWidth,
-        y: Math.random() * innerHeight,
-        vx: (Math.random() - 0.5) * (isMobile ? 0.18 : 0.26),
-        vy: (Math.random() - 0.5) * (isMobile ? 0.18 : 0.26),
-        r: Math.random() * (isMobile ? 1.4 : 2.1) + 0.4
+    function renderPlots() {
+      telemetryHost.innerHTML = '';
+
+      const entropyData = series(72, 68, 9, 3, 5.1);
+      const latencyData = series(72, 26, 5, 2.5, 7.8);
+      const sectors = Array.from({ length: 9 }, (_, i) => ({
+        sector: `S${i + 1}`,
+        intensity: 18 + Math.round(14 * Math.abs(Math.sin((i + phase) / 2.8))) + Math.round(Math.random() * 6)
       }));
+
+      const plotA = Plot.plot({
+        height: 188,
+        marginLeft: 44,
+        marginRight: 18,
+        marginTop: 14,
+        marginBottom: 30,
+        background: "transparent",
+        style: { color: "#00ff99", fontFamily: "IBM Plex Mono, monospace" },
+        x: { label: null, ticks: 6, tickSize: 5 },
+        y: { label: null, grid: true, nice: true },
+        marks: [
+          Plot.areaY(entropyData, { x: "t", y: "value", curve: "basis", fill: "#00ff99", fillOpacity: 0.08 }),
+          Plot.lineY(entropyData, { x: "t", y: "value", curve: "basis", stroke: "#00ff99", strokeWidth: 2 }),
+          Plot.dot(entropyData.filter((_, i) => i % 12 === 0), { x: "t", y: "value", fill: "#c9ffe8", r: 2.3 })
+        ]
+      });
+
+      const plotB = Plot.plot({
+        height: 160,
+        marginLeft: 44,
+        marginRight: 18,
+        marginTop: 14,
+        marginBottom: 26,
+        background: "transparent",
+        style: { color: "#00ff99", fontFamily: "IBM Plex Mono, monospace" },
+        x: { label: null, axis: null },
+        y: { label: null, grid: true, nice: true },
+        marks: [
+          Plot.barY(sectors, { x: "sector", y: "intensity", fill: "rgba(0,255,153,.58)" }),
+          Plot.ruleY([0], { stroke: "rgba(0,255,153,.15)" })
+        ]
+      });
+
+      const labelWrap = document.createElement('div');
+      labelWrap.className = 'section-title';
+      labelWrap.innerHTML = '<span>Signal entropy</span><span>adaptive waveform</span>';
+
+      const labelWrap2 = document.createElement('div');
+      labelWrap2.className = 'section-title';
+      labelWrap2.innerHTML = '<span>Threat intensity</span><span>sector heat</span>';
+
+      const plotOne = document.createElement('div');
+      plotOne.className = 'plot';
+      plotOne.appendChild(plotA);
+
+      const plotTwo = document.createElement('div');
+      plotTwo.className = 'plot';
+      plotTwo.appendChild(plotB);
+
+      telemetryHost.appendChild(labelWrap);
+      telemetryHost.appendChild(plotOne);
+      telemetryHost.appendChild(labelWrap2);
+      telemetryHost.appendChild(plotTwo);
+
+      phase += 1;
     }
 
-    function draw() {
-      ctx.clearRect(0, 0, innerWidth, innerHeight);
+    renderPlots();
+    setInterval(renderPlots, 2200);
 
-      if (!reducedMotion) {
-        for (const p of particles) {
-          p.x += p.vx;
-          p.y += p.vy;
+    // Three.js holographic core
+    const threeHost = document.getElementById('threeStage');
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
+    camera.position.set(0, 0, 6.2);
 
-          if (p.x < -10 || p.x > innerWidth + 10) p.vx *= -1;
-          if (p.y < -10 || p.y > innerHeight + 10) p.vy *= -1;
-
-          const dx = mouse.x - p.x;
-          const dy = mouse.y - p.y;
-          const dist = Math.hypot(dx, dy);
-
-          let alpha = 0.22;
-          let radius = p.r;
-
-          if (mouse.active && dist < (isMobile ? 110 : 150)) {
-            alpha = 0.56;
-            radius = p.r + 1.2;
-          }
-
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(0,255,153,${alpha})`;
-          ctx.fill();
-
-          if (mouse.active && dist < (isMobile ? 160 : 220)) {
-            ctx.beginPath();
-            ctx.moveTo(p.x, p.y);
-            ctx.lineTo(mouse.x, mouse.y);
-            ctx.strokeStyle = 'rgba(0,255,153,0.05)';
-            ctx.lineWidth = 1;
-            ctx.stroke();
-          }
-        }
-      }
-
-      requestAnimationFrame(draw);
-    }
-
-    resize();
-    createParticles();
-    draw();
-
-    window.addEventListener('resize', () => {
-      resize();
-      createParticles();
+    const renderer = new THREE.WebGLRenderer({
+      alpha: true,
+      antialias: !isMobile,
+      powerPreference: 'high-performance'
     });
 
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobile ? 1.15 : 1.6));
+    renderer.setClearColor(0x000000, 0);
+    threeHost.appendChild(renderer.domElement);
+
+    const group = new THREE.Group();
+    scene.add(group);
+
+    const ambient = new THREE.AmbientLight(0x99ffdd, 1.15);
+    scene.add(ambient);
+
+    const key = new THREE.DirectionalLight(0x00ff99, 1.8);
+    key.position.set(3, 4, 5);
+    scene.add(key);
+
+    const rim = new THREE.PointLight(0x4ad8ff, 1.6, 30);
+    rim.position.set(-4, -2, 5);
+    scene.add(rim);
+
+    const pulse = new THREE.PointLight(0xff4d8a, 0.9, 24);
+    pulse.position.set(0, 2.5, 4);
+    scene.add(pulse);
+
+    const coreGeo = new THREE.IcosahedronGeometry(1.22, 2);
+    const coreMat = new THREE.MeshStandardMaterial({
+      color: 0x06160f,
+      emissive: 0x00ff99,
+      emissiveIntensity: 0.8,
+      metalness: 0.2,
+      roughness: 0.22,
+      transparent: true,
+      opacity: 0.26
+    });
+    const coreMesh = new THREE.Mesh(coreGeo, coreMat);
+    group.add(coreMesh);
+
+    const wireMat = new THREE.MeshBasicMaterial({
+      color: 0x00ff99,
+      wireframe: true,
+      transparent: true,
+      opacity: 0.26
+    });
+    const wireMesh = new THREE.Mesh(coreGeo, wireMat);
+    group.add(wireMesh);
+
+    const ringGeo = new THREE.TorusGeometry(2.05, 0.035, 12, 280);
+    const ringMat = new THREE.MeshBasicMaterial({
+      color: 0x00ff99,
+      transparent: true,
+      opacity: 0.42
+    });
+    const ring1 = new THREE.Mesh(ringGeo, ringMat);
+    ring1.rotation.x = Math.PI / 2;
+    group.add(ring1);
+
+    const ring2 = new THREE.Mesh(
+      new THREE.TorusGeometry(2.45, 0.02, 10, 220),
+      new THREE.MeshBasicMaterial({ color: 0x4ad8ff, transparent: true, opacity: 0.22 })
+    );
+    ring2.rotation.y = Math.PI / 2;
+    group.add(ring2);
+
+    const halo = new THREE.Mesh(
+      new THREE.TorusGeometry(1.48, 0.016, 10, 220),
+      new THREE.MeshBasicMaterial({ color: 0xff4d8a, transparent: true, opacity: 0.18 })
+    );
+    halo.rotation.z = Math.PI / 3;
+    group.add(halo);
+
+    const knot = new THREE.Mesh(
+      new THREE.TorusKnotGeometry(1.38, 0.07, 220, 24),
+      new THREE.MeshBasicMaterial({ color: 0x00d98a, transparent: true, opacity: 0.30 })
+    );
+    group.add(knot);
+
+    const particleCount = reduceMotion ? 0 : (isMobile ? 120 : 220);
+    const particleGeo = new THREE.BufferGeometry();
+    const particlePos = new Float32Array(particleCount * 3);
+    for (let i = 0; i < particleCount; i++) {
+      const r = 3 + Math.random() * 3.8;
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.acos(2 * Math.random() - 1);
+      particlePos[i * 3 + 0] = r * Math.sin(phi) * Math.cos(theta);
+      particlePos[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+      particlePos[i * 3 + 2] = r * Math.cos(phi);
+    }
+    particleGeo.setAttribute('position', new THREE.BufferAttribute(particlePos, 3));
+
+    const particleMat = new THREE.PointsMaterial({
+      color: 0x00ff99,
+      size: isMobile ? 0.018 : 0.02,
+      transparent: true,
+      opacity: 0.78,
+      depthWrite: false
+    });
+    const particleField = new THREE.Points(particleGeo, particleMat);
+    group.add(particleField);
+
+    const target = { x: 0, y: 0 };
+    const pointer = { x: 0, y: 0, active: false };
+
+    function resizeThree() {
+      const rect = threeHost.getBoundingClientRect();
+      const width = Math.max(1, rect.width);
+      const height = Math.max(1, rect.height);
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
+      renderer.setSize(width, height, false);
+    }
+
+    resizeThree();
+    window.addEventListener('resize', resizeThree);
+
     window.addEventListener('pointermove', (e) => {
-      mouse.x = e.clientX;
-      mouse.y = e.clientY;
-      mouse.active = true;
+      pointer.x = (e.clientX / window.innerWidth - 0.5) * 2;
+      pointer.y = (e.clientY / window.innerHeight - 0.5) * 2;
+      pointer.active = true;
 
       if (!isMobile) {
-        const shell = document.querySelector('.shell');
-        const x = (e.clientX / innerWidth - 0.5) * 10;
-        const y = (e.clientY / innerHeight - 0.5) * 10;
-        shell.style.transform = `perspective(1200px) rotateX(${(-y * 0.15).toFixed(2)}deg) rotateY(${(x * 0.15).toFixed(2)}deg)`;
+        const rx = (e.clientY / window.innerHeight - 0.5) * -0.6;
+        const ry = (e.clientX / window.innerWidth - 0.5) * 0.9;
+        shell.style.transform = `perspective(1400px) rotateX(${rx}deg) rotateY(${ry}deg)`;
       }
     });
 
     window.addEventListener('pointerleave', () => {
-      mouse.active = false;
-      const shell = document.querySelector('.shell');
+      pointer.active = false;
       shell.style.transform = 'none';
     });
 
-    // Touch fallback
-    window.addEventListener('touchmove', (e) => {
-      const t = e.touches && e.touches[0];
-      if (!t) return;
-      mouse.x = t.clientX;
-      mouse.y = t.clientY;
+    function animateThree() {
+      if (!reduceMotion) {
+        group.rotation.y += 0.0032;
+        group.rotation.x += 0.0011;
+
+        if (pointer.active) {
+          target.x += (pointer.x * 0.18 - target.x) * 0.05;
+          target.y += (-pointer.y * 0.16 - target.y) * 0.05;
+        } else {
+          target.x *= 0.94;
+          target.y *= 0.94;
+        }
+
+        group.rotation.y += target.x * 0.0025;
+        group.rotation.x += target.y * 0.0025;
+
+        coreMesh.rotation.z += 0.0022;
+        wireMesh.rotation.z -= 0.0018;
+        ring1.rotation.z += 0.007;
+        ring2.rotation.x -= 0.005;
+        halo.rotation.y += 0.009;
+        knot.rotation.x += 0.004;
+        knot.rotation.y -= 0.003;
+
+        const p = particleField.geometry.attributes.position.array;
+        for (let i = 0; i < p.length; i += 3) {
+          p[i + 0] += Math.sin((i + performance.now() * 0.0002) * 0.01) * 0.001;
+          p[i + 1] += Math.cos((i + performance.now() * 0.0002) * 0.01) * 0.001;
+        }
+        particleField.geometry.attributes.position.needsUpdate = true;
+      }
+
+      renderer.render(scene, camera);
+      requestAnimationFrame(animateThree);
+    }
+
+    animateThree();
+
+    // Background particle field with connection lines
+    const bg = document.getElementById('bgCanvas');
+    const bctx = bg.getContext('2d', { alpha: true });
+    let bw = 0, bh = 0;
+    const bgParticles = [];
+    const bgCount = reduceMotion ? 0 : (isMobile ? 54 : 128);
+
+    function resizeBg() {
+      const dpr = Math.min(window.devicePixelRatio || 1, isMobile ? 1.2 : 1.6);
+      bw = bg.width = Math.floor(window.innerWidth * dpr);
+      bh = bg.height = Math.floor(window.innerHeight * dpr);
+      bg.style.width = window.innerWidth + 'px';
+      bg.style.height = window.innerHeight + 'px';
+      bctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    function initBgParticles() {
+      bgParticles.length = 0;
+      for (let i = 0; i < bgCount; i++) {
+        bgParticles.push({
+          x: Math.random() * window.innerWidth,
+          y: Math.random() * window.innerHeight,
+          vx: (Math.random() - 0.5) * (isMobile ? 0.22 : 0.34),
+          vy: (Math.random() - 0.5) * (isMobile ? 0.22 : 0.34),
+          r: Math.random() * (isMobile ? 1.2 : 1.8) + 0.4
+        });
+      }
+    }
+
+    resizeBg();
+    initBgParticles();
+    window.addEventListener('resize', () => {
+      resizeBg();
+      initBgParticles();
+    });
+
+    const mouse = { x: 0, y: 0, active: false };
+    window.addEventListener('pointermove', (e) => {
+      mouse.x = e.clientX;
+      mouse.y = e.clientY;
       mouse.active = true;
-    }, { passive: true });
+    });
+    window.addEventListener('pointerleave', () => {
+      mouse.active = false;
+    });
+
+    function drawBg() {
+      bctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+
+      if (!reduceMotion) {
+        for (let i = 0; i < bgParticles.length; i++) {
+          const p = bgParticles[i];
+          p.x += p.vx;
+          p.y += p.vy;
+
+          if (p.x < -20) p.x = window.innerWidth + 20;
+          if (p.x > window.innerWidth + 20) p.x = -20;
+          if (p.y < -20) p.y = window.innerHeight + 20;
+          if (p.y > window.innerHeight + 20) p.y = -20;
+
+          const mdx = mouse.x - p.x;
+          const mdy = mouse.y - p.y;
+          const md = Math.hypot(mdx, mdy);
+          const nearMouse = mouse.active && md < 180;
+
+          for (let j = i + 1; j < bgParticles.length; j++) {
+            const q = bgParticles[j];
+            const dx = p.x - q.x;
+            const dy = p.y - q.y;
+            const d = Math.hypot(dx, dy);
+            if (d < (isMobile ? 90 : 140)) {
+              bctx.beginPath();
+              bctx.moveTo(p.x, p.y);
+              bctx.lineTo(q.x, q.y);
+              bctx.strokeStyle = `rgba(0,255,153,${(1 - d / (isMobile ? 90 : 140)) * 0.08})`;
+              bctx.lineWidth = 1;
+              bctx.stroke();
+            }
+          }
+
+          bctx.beginPath();
+          bctx.arc(p.x, p.y, nearMouse ? p.r + 1.2 : p.r, 0, Math.PI * 2);
+          bctx.fillStyle = nearMouse ? 'rgba(0,255,153,.72)' : 'rgba(0,255,153,.45)';
+          bctx.fill();
+        }
+      }
+
+      requestAnimationFrame(drawBg);
+    }
+
+    drawBg();
+
+    // Ambient audio layer, user initiated only
+    const audioToggle = document.getElementById('audioToggle');
+    let audioCtx = null;
+    let audioNodes = null;
+    let audioOn = false;
+
+    function startAudio() {
+      if (audioOn) return;
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+
+      audioCtx = audioCtx || new AC();
+      const master = audioCtx.createGain();
+      master.gain.value = 0.025;
+
+      const filter = audioCtx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.value = 260;
+      filter.Q.value = 0.8;
+
+      const osc1 = audioCtx.createOscillator();
+      osc1.type = 'sine';
+      osc1.frequency.value = 42;
+
+      const osc2 = audioCtx.createOscillator();
+      osc2.type = 'triangle';
+      osc2.frequency.value = 78;
+
+      const lfo = audioCtx.createOscillator();
+      lfo.type = 'sine';
+      lfo.frequency.value = 0.12;
+
+      const lfoGain = audioCtx.createGain();
+      lfoGain.gain.value = 0.012;
+
+      lfo.connect(lfoGain);
+      lfoGain.connect(master.gain);
+
+      osc1.connect(filter);
+      osc2.connect(filter);
+      filter.connect(master);
+      master.connect(audioCtx.destination);
+
+      osc1.start();
+      osc2.start();
+      lfo.start();
+
+      audioNodes = { osc1, osc2, lfo, master, filter };
+      audioOn = true;
+      audioToggle.textContent = 'Disable audio';
+    }
+
+    function stopAudio() {
+      if (!audioOn || !audioNodes) return;
+      const { osc1, osc2, lfo, master } = audioNodes;
+      try { osc1.stop(); } catch(e) {}
+      try { osc2.stop(); } catch(e) {}
+      try { lfo.stop(); } catch(e) {}
+      try { master.disconnect(); } catch(e) {}
+      audioNodes = null;
+      audioOn = false;
+      audioToggle.textContent = 'Enable audio';
+    }
+
+    audioToggle.addEventListener('click', async () => {
+      if (!audioOn) {
+        startAudio();
+        if (audioCtx && audioCtx.state === 'suspended') {
+          try { await audioCtx.resume(); } catch (e) {}
+        }
+      } else {
+        stopAudio();
+      }
+    });
   </script>
 </body>
 </html>
