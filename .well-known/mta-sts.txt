@@ -1,5 +1,5 @@
 version: STSv1
 mode: enforce
 mx: negarandeh-co-uk.mail.protection.outlook.com
-mx: *.mail.protection.outlook.com
+mx: 524808971.pamx1.hotmail.com
 max_age: 604800
