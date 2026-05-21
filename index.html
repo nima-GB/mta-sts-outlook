@@ -1,563 +1,1086 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="dark" />
+  <title>SERAPH // Autonomous Defence Grid</title>
 
-<title>SERAPH // Cognitive Defence Grid</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;800&family=IBM+Plex+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
 
-<style>
-
-:root{
-    --neon:#00ff88;
-    --neon-soft:#00ff8844;
-    --bg:#020403;
-    --panel:#08110c;
-    --danger:#ff004c;
-    --text:#b7ffd7;
-}
-
-*{
-    margin:0;
-    padding:0;
-    box-sizing:border-box;
-}
-
-body{
-    overflow:hidden;
-    background:radial-gradient(circle at center,#071109 0%,#010201 70%);
-    color:var(--text);
-    font-family:Consolas, monospace;
-    height:100vh;
-}
-
-/* =========================================
-BACKGROUND NOISE
-========================================= */
-
-.noise{
-    position:fixed;
-    inset:0;
-    opacity:.06;
-    pointer-events:none;
-    background-image:
-    repeating-radial-gradient(circle at 50% 50%,
-    rgba(255,255,255,.08) 0px,
-    transparent 1px,
-    transparent 4px);
-    animation:noiseMove .25s infinite;
-}
-
-@keyframes noiseMove{
-    0%{transform:translate(0,0)}
-    25%{transform:translate(-1px,1px)}
-    50%{transform:translate(1px,-1px)}
-    75%{transform:translate(2px,1px)}
-    100%{transform:translate(0,0)}
-}
-
-/* =========================================
-SCANLINES
-========================================= */
-
-.scanlines{
-    position:fixed;
-    inset:0;
-    background:
-    repeating-linear-gradient(
-        to bottom,
-        transparent 0px,
-        rgba(0,255,120,.03) 1px,
-        transparent 3px
-    );
-    pointer-events:none;
-}
-
-.scanbeam{
-    position:absolute;
-    width:100%;
-    height:120px;
-    background:linear-gradient(
-        to bottom,
-        transparent,
-        rgba(0,255,136,.08),
-        transparent
-    );
-    animation:scan 5s linear infinite;
-}
-
-@keyframes scan{
-    from{transform:translateY(-200px)}
-    to{transform:translateY(120vh)}
-}
-
-/* =========================================
-MAIN CONTAINER
-========================================= */
-
-.container{
-    position:relative;
-    z-index:5;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    height:100vh;
-    padding:40px;
-}
-
-/* =========================================
-MAIN HUD
-========================================= */
-
-.hud{
-    width:1200px;
-    max-width:95%;
-    height:720px;
-
-    border:1px solid var(--neon-soft);
-
-    background:
-    linear-gradient(
-        180deg,
-        rgba(0,255,100,.05),
-        rgba(0,0,0,.85)
-    );
-
-    backdrop-filter:blur(6px);
-
-    box-shadow:
-    0 0 40px rgba(0,255,136,.12),
-    inset 0 0 80px rgba(0,255,136,.03);
-
-    position:relative;
-    overflow:hidden;
-}
-
-/* =========================================
-GRID
-========================================= */
-
-.grid{
-    position:absolute;
-    inset:0;
-
-    background-image:
-        linear-gradient(rgba(0,255,136,.05) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(0,255,136,.05) 1px, transparent 1px);
-
-    background-size:40px 40px;
-}
-
-/* =========================================
-HEADER
-========================================= */
-
-.header{
-    padding:28px 40px;
-    border-bottom:1px solid rgba(0,255,136,.1);
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-}
-
-.logo{
-    font-size:32px;
-    letter-spacing:10px;
-    color:var(--neon);
-    position:relative;
-    animation:glitch 2s infinite;
-}
-
-.logo::before,
-.logo::after{
-    content:attr(data-text);
-    position:absolute;
-    top:0;
-    left:0;
-    opacity:.5;
-}
-
-.logo::before{
-    color:#ff004c;
-    transform:translate(-2px,0);
-}
-
-.logo::after{
-    color:#00ccff;
-    transform:translate(2px,0);
-}
-
-@keyframes glitch{
-    0%,100%{transform:none}
-    20%{transform:skewX(2deg)}
-    40%{transform:translateX(1px)}
-    60%{transform:translateX(-1px)}
-    80%{transform:skewX(-2deg)}
-}
-
-.status{
-    color:var(--danger);
-    font-size:12px;
-    letter-spacing:4px;
-}
-
-/* =========================================
-CENTER CORE
-========================================= */
-
-.core-wrapper{
-    position:absolute;
-    inset:0;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-}
-
-.core{
-    width:260px;
-    height:260px;
-    border-radius:50%;
-    border:1px solid rgba(0,255,136,.3);
-    position:relative;
-
-    box-shadow:
-    0 0 60px rgba(0,255,136,.15),
-    inset 0 0 40px rgba(0,255,136,.15);
-
-    animation:rotate 20s linear infinite;
-}
-
-.core::before{
-    content:"";
-    position:absolute;
-    inset:30px;
-    border-radius:50%;
-    border:1px solid rgba(0,255,136,.2);
-}
-
-.core::after{
-    content:"";
-    position:absolute;
-    inset:80px;
-    border-radius:50%;
-    background:radial-gradient(circle,var(--neon),transparent);
-    filter:blur(8px);
-    animation:pulse 2s infinite;
-}
-
-@keyframes rotate{
-    from{transform:rotate(0deg)}
-    to{transform:rotate(360deg)}
-}
-
-@keyframes pulse{
-    0%,100%{
-        transform:scale(.9);
-        opacity:.5;
+  <style>
+    :root{
+      --bg:#020403;
+      --bg2:#06100b;
+      --panel:rgba(7, 18, 13, 0.62);
+      --panel-strong:rgba(4, 12, 8, 0.88);
+      --line:rgba(0,255,153,0.14);
+      --line-soft:rgba(0,255,153,0.08);
+      --neon:#00ff99;
+      --neon-soft:rgba(0,255,153,0.22);
+      --text:#d7ffef;
+      --muted:#8ebfae;
+      --danger:#ff2f6d;
+      --warn:#ffd24d;
+      --shadow:0 0 40px rgba(0,255,153,.12);
+      --radius:18px;
+      --max:1440px;
     }
-    50%{
-        transform:scale(1.2);
-        opacity:1;
+
+    *{ box-sizing:border-box; }
+    html,body{
+      width:100%;
+      min-height:100%;
+      margin:0;
+      background:
+        radial-gradient(circle at 50% 30%, rgba(0,255,153,0.08), transparent 28%),
+        radial-gradient(circle at 50% 50%, rgba(0,255,153,0.05), transparent 40%),
+        linear-gradient(180deg, #000 0%, var(--bg) 40%, #000 100%);
+      color:var(--text);
+      font-family:"IBM Plex Mono", monospace;
+      overflow-x:hidden;
     }
-}
 
-/* =========================================
-PANELS
-========================================= */
-
-.panel{
-    position:absolute;
-    width:320px;
-    padding:20px;
-    border:1px solid rgba(0,255,136,.1);
-    background:rgba(0,10,5,.55);
-}
-
-.left{
-    top:120px;
-    left:30px;
-}
-
-.right{
-    top:120px;
-    right:30px;
-}
-
-.bottom{
-    bottom:30px;
-    left:30px;
-    width:calc(100% - 60px);
-    height:180px;
-}
-
-.panel-title{
-    color:var(--neon);
-    margin-bottom:20px;
-    letter-spacing:4px;
-    font-size:13px;
-}
-
-/* =========================================
-METRICS
-========================================= */
-
-.metric{
-    display:flex;
-    justify-content:space-between;
-    margin-bottom:14px;
-    font-size:13px;
-    border-bottom:1px solid rgba(0,255,136,.08);
-    padding-bottom:6px;
-}
-
-.metric span:last-child{
-    color:var(--neon);
-}
-
-/* =========================================
-TERMINAL
-========================================= */
-
-.terminal{
-    height:110px;
-    overflow:hidden;
-    color:#87ffb8;
-    font-size:12px;
-    line-height:1.7;
-}
-
-.cursor{
-    display:inline-block;
-    width:10px;
-    background:var(--neon);
-    animation:blink 1s infinite;
-}
-
-@keyframes blink{
-    50%{opacity:0}
-}
-
-/* =========================================
-ENTROPY BARS
-========================================= */
-
-.bars{
-    display:flex;
-    align-items:flex-end;
-    gap:6px;
-    height:90px;
-    margin-top:20px;
-}
-
-.bar{
-    width:10px;
-    background:var(--neon);
-    box-shadow:0 0 12px var(--neon);
-    animation:entropy 1s infinite alternate;
-}
-
-.bar:nth-child(1){height:20%;animation-delay:.1s}
-.bar:nth-child(2){height:60%;animation-delay:.3s}
-.bar:nth-child(3){height:40%;animation-delay:.5s}
-.bar:nth-child(4){height:80%;animation-delay:.2s}
-.bar:nth-child(5){height:50%;animation-delay:.6s}
-.bar:nth-child(6){height:95%;animation-delay:.4s}
-
-@keyframes entropy{
-    to{
-        transform:scaleY(1.8);
-        opacity:.6;
+    body{
+      position:relative;
+      isolation:isolate;
     }
-}
 
-/* =========================================
-FOOTER TEXT
-========================================= */
+    body::before{
+      content:"";
+      position:fixed;
+      inset:0;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.015), transparent 18%, transparent 82%, rgba(255,255,255,0.01)),
+        repeating-linear-gradient(
+          to bottom,
+          rgba(255,255,255,0.025) 0px,
+          rgba(255,255,255,0.025) 1px,
+          transparent 2px,
+          transparent 4px
+        );
+      opacity:.28;
+      pointer-events:none;
+      z-index:1;
+      mix-blend-mode:screen;
+    }
 
-.footer{
-    position:absolute;
-    bottom:8px;
-    right:15px;
-    font-size:10px;
-    opacity:.5;
-    letter-spacing:3px;
-}
+    #bgCanvas{
+      position:fixed;
+      inset:0;
+      width:100%;
+      height:100%;
+      z-index:0;
+      display:block;
+    }
 
-</style>
+    .noise{
+      position:fixed;
+      inset:0;
+      z-index:2;
+      pointer-events:none;
+      opacity:.065;
+      background-image:
+        repeating-radial-gradient(circle at 50% 50%, rgba(255,255,255,.2) 0 1px, transparent 1px 4px);
+      animation: noiseShift .28s infinite steps(2,end);
+      mix-blend-mode:screen;
+    }
+
+    @keyframes noiseShift{
+      0%{ transform:translate3d(0,0,0); }
+      25%{ transform:translate3d(-1px,1px,0); }
+      50%{ transform:translate3d(1px,-1px,0); }
+      75%{ transform:translate3d(1px,2px,0); }
+      100%{ transform:translate3d(0,0,0); }
+    }
+
+    .scanbeam{
+      position:fixed;
+      left:0;
+      top:-18vh;
+      width:100%;
+      height:18vh;
+      z-index:2;
+      pointer-events:none;
+      background:linear-gradient(to bottom, transparent, rgba(0,255,153,.10), transparent);
+      filter:blur(1px);
+      animation: scanMove 6.5s linear infinite;
+      mix-blend-mode:screen;
+    }
+
+    @keyframes scanMove{
+      from{ transform:translateY(-20vh); }
+      to{ transform:translateY(120vh); }
+    }
+
+    .wrap{
+      position:relative;
+      z-index:5;
+      width:100%;
+      min-height:100vh;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      padding:24px;
+    }
+
+    .shell{
+      width:min(var(--max), 100%);
+      min-height:min(92vh, 1120px);
+      border:1px solid var(--line);
+      border-radius:28px;
+      overflow:hidden;
+      position:relative;
+      background:
+        linear-gradient(180deg, rgba(0,255,153,.045), rgba(0,0,0,.84)),
+        radial-gradient(circle at 50% 30%, rgba(0,255,153,.06), transparent 32%);
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,.02) inset,
+        0 0 60px rgba(0,255,153,.10),
+        inset 0 0 80px rgba(0,255,153,.04);
+      backdrop-filter: blur(12px);
+    }
+
+    .shell::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      pointer-events:none;
+      background:
+        linear-gradient(135deg, rgba(0,255,153,.08), transparent 30%),
+        radial-gradient(circle at 50% 50%, transparent 44%, rgba(0,0,0,.54) 100%);
+      opacity:.9;
+    }
+
+    .topbar{
+      position:relative;
+      z-index:3;
+      display:flex;
+      justify-content:space-between;
+      gap:18px;
+      align-items:flex-start;
+      padding:26px 30px 22px;
+      border-bottom:1px solid rgba(0,255,153,.09);
+    }
+
+    .brand{
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      min-width:0;
+    }
+
+    .logo{
+      position:relative;
+      display:inline-block;
+      font-family:"Orbitron", sans-serif;
+      font-size:clamp(1.45rem, 2.5vw, 2.6rem);
+      font-weight:800;
+      letter-spacing:0.42em;
+      color:var(--neon);
+      text-shadow:0 0 14px rgba(0,255,153,.65), 0 0 36px rgba(0,255,153,.22);
+      line-height:1;
+      text-transform:uppercase;
+      width:fit-content;
+    }
+
+    .logo::before,
+    .logo::after{
+      content:attr(data-text);
+      position:absolute;
+      inset:0;
+      opacity:.45;
+      pointer-events:none;
+    }
+
+    .logo::before{
+      transform:translate(-1px, 0);
+      color:#ff4d8a;
+      clip-path:inset(0 0 54% 0);
+    }
+
+    .logo::after{
+      transform:translate(1px, 0);
+      color:#4ad8ff;
+      clip-path:inset(46% 0 0 0);
+    }
+
+    .tagline{
+      font-size:.8rem;
+      letter-spacing:.34em;
+      text-transform:uppercase;
+      color:var(--muted);
+      max-width:72ch;
+      line-height:1.6;
+    }
+
+    .status{
+      text-align:right;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      align-items:flex-end;
+      min-width:240px;
+    }
+
+    .status-pill{
+      padding:10px 14px;
+      border:1px solid rgba(0,255,153,.18);
+      border-radius:999px;
+      background:rgba(0,255,153,.05);
+      color:var(--neon);
+      font-size:.76rem;
+      letter-spacing:.25em;
+      text-transform:uppercase;
+      white-space:nowrap;
+    }
+
+    .clockline{
+      font-size:.78rem;
+      color:var(--muted);
+      letter-spacing:.18em;
+      text-transform:uppercase;
+      white-space:nowrap;
+    }
+
+    .hero{
+      position:relative;
+      z-index:3;
+      display:grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(340px, .9fr);
+      gap:24px;
+      padding:24px 30px 30px;
+      align-items:stretch;
+    }
+
+    .hero-copy{
+      display:flex;
+      flex-direction:column;
+      gap:18px;
+      min-width:0;
+      padding:18px 0 0;
+    }
+
+    .eyebrow{
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      width:fit-content;
+      padding:9px 14px;
+      border:1px solid rgba(0,255,153,.16);
+      border-radius:999px;
+      background:rgba(0,255,153,.05);
+      color:var(--neon);
+      font-size:.76rem;
+      letter-spacing:.28em;
+      text-transform:uppercase;
+    }
+
+    .eyebrow::before{
+      content:"";
+      width:8px;
+      height:8px;
+      border-radius:50%;
+      background:var(--neon);
+      box-shadow:0 0 12px var(--neon);
+      flex:0 0 auto;
+    }
+
+    .hero h1{
+      margin:0;
+      font-family:"Orbitron", sans-serif;
+      font-size:clamp(2.4rem, 5vw, 5.7rem);
+      line-height:.95;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      color:#f4fff8;
+      text-shadow:
+        0 0 16px rgba(0,255,153,.20),
+        0 0 32px rgba(0,255,153,.12);
+    }
+
+    .hero h1 span{
+      display:block;
+      color:var(--neon);
+      text-shadow:0 0 20px rgba(0,255,153,.44);
+    }
+
+    .hero p{
+      max-width:68ch;
+      margin:0;
+      font-size:clamp(.95rem, 1.1vw, 1.05rem);
+      line-height:1.85;
+      color:#cbeede;
+    }
+
+    .actions{
+      display:flex;
+      gap:14px;
+      flex-wrap:wrap;
+      margin-top:8px;
+    }
+
+    .btn{
+      appearance:none;
+      border:none;
+      cursor:pointer;
+      padding:14px 18px;
+      border-radius:14px;
+      font-family:"Orbitron", sans-serif;
+      text-transform:uppercase;
+      letter-spacing:.22em;
+      font-size:.76rem;
+      color:#01120b;
+      background:linear-gradient(180deg, rgba(0,255,153,1), rgba(0,220,132,1));
+      box-shadow:0 0 18px rgba(0,255,153,.22);
+      transition:transform .18s ease, box-shadow .18s ease, filter .18s ease;
+    }
+
+    .btn:hover{
+      transform:translateY(-1px);
+      box-shadow:0 0 26px rgba(0,255,153,.32);
+      filter:saturate(1.1);
+    }
+
+    .btn.secondary{
+      color:var(--text);
+      background:rgba(0,255,153,.05);
+      border:1px solid rgba(0,255,153,.16);
+      box-shadow:none;
+    }
+
+    .btn.secondary:hover{
+      background:rgba(0,255,153,.08);
+    }
+
+    .hero-side{
+      display:grid;
+      gap:14px;
+      align-content:start;
+    }
+
+    .card{
+      position:relative;
+      overflow:hidden;
+      border-radius:var(--radius);
+      background:var(--panel);
+      border:1px solid var(--line);
+      box-shadow:var(--shadow);
+      backdrop-filter:blur(8px);
+    }
+
+    .card::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      pointer-events:none;
+      background:linear-gradient(135deg, rgba(255,255,255,.05), transparent 28%);
+      opacity:.55;
+    }
+
+    .card-inner{
+      position:relative;
+      z-index:1;
+      padding:18px;
+    }
+
+    .stat-grid{
+      display:grid;
+      grid-template-columns:repeat(2, minmax(0,1fr));
+      gap:12px;
+    }
+
+    .stat{
+      padding:14px;
+      border-radius:16px;
+      background:rgba(0,0,0,.16);
+      border:1px solid rgba(0,255,153,.08);
+    }
+
+    .stat label{
+      display:block;
+      font-size:.68rem;
+      letter-spacing:.28em;
+      text-transform:uppercase;
+      color:var(--muted);
+      margin-bottom:12px;
+    }
+
+    .stat strong{
+      display:block;
+      font-family:"Orbitron", sans-serif;
+      font-size:1.2rem;
+      letter-spacing:.08em;
+      color:var(--neon);
+      text-shadow:0 0 14px rgba(0,255,153,.26);
+    }
+
+    .split{
+      position:relative;
+      z-index:3;
+      display:grid;
+      grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr);
+      gap:24px;
+      padding:0 30px 30px;
+    }
+
+    .panel{
+      border-radius:24px;
+      background:var(--panel-strong);
+      border:1px solid var(--line);
+      box-shadow:var(--shadow);
+      overflow:hidden;
+      position:relative;
+      min-height:100%;
+    }
+
+    .panel-header{
+      padding:18px 18px 14px;
+      border-bottom:1px solid rgba(0,255,153,.08);
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      align-items:center;
+      font-family:"Orbitron", sans-serif;
+      letter-spacing:.24em;
+      text-transform:uppercase;
+      font-size:.76rem;
+      color:var(--neon);
+    }
+
+    .panel-body{
+      padding:18px;
+    }
+
+    .metric-list{
+      display:grid;
+      gap:12px;
+    }
+
+    .metric-row{
+      display:flex;
+      justify-content:space-between;
+      gap:16px;
+      align-items:center;
+      padding:12px 14px;
+      border-radius:14px;
+      background:rgba(0,255,153,.04);
+      border:1px solid rgba(0,255,153,.08);
+      font-size:.92rem;
+    }
+
+    .metric-row span:first-child{
+      color:#ccecdf;
+    }
+
+    .metric-row span:last-child{
+      color:var(--neon);
+      white-space:nowrap;
+    }
+
+    .metric-row .warn{
+      color:var(--warn);
+    }
+
+    .metric-row .danger{
+      color:var(--danger);
+    }
+
+    .terminal{
+      height:220px;
+      overflow:auto;
+      font-size:.9rem;
+      line-height:1.75;
+      color:#aaf7cb;
+      scrollbar-width:thin;
+      scrollbar-color: rgba(0,255,153,.28) transparent;
+    }
+
+    .terminal::-webkit-scrollbar{
+      width:8px;
+    }
+
+    .terminal::-webkit-scrollbar-thumb{
+      background:rgba(0,255,153,.25);
+      border-radius:999px;
+    }
+
+    .terminal-line{
+      white-space:pre-wrap;
+    }
+
+    .cursor{
+      display:inline-block;
+      width:9px;
+      height:16px;
+      background:var(--neon);
+      margin-left:2px;
+      vertical-align:middle;
+      animation:blink 1s steps(1,end) infinite;
+    }
+
+    @keyframes blink{
+      50%{ opacity:0; }
+    }
+
+    .map-wrap{
+      display:grid;
+      gap:16px;
+    }
+
+    .map{
+      position:relative;
+      aspect-ratio:16/10;
+      border-radius:22px;
+      background:
+        radial-gradient(circle at 50% 50%, rgba(0,255,153,.12), transparent 42%),
+        radial-gradient(circle at 50% 50%, rgba(0,255,153,.05), transparent 60%),
+        linear-gradient(180deg, rgba(0,0,0,.1), rgba(0,0,0,.38));
+      border:1px solid rgba(0,255,153,.12);
+      overflow:hidden;
+    }
+
+    .map svg{
+      position:absolute;
+      inset:0;
+      width:100%;
+      height:100%;
+    }
+
+    .map .node{
+      fill:#00ff99;
+      filter:drop-shadow(0 0 8px rgba(0,255,153,.8));
+      animation: pulseNode 2.6s infinite ease-in-out;
+    }
+
+    .map .node.delay{
+      animation-delay:1s;
+    }
+
+    .map .line{
+      stroke:rgba(0,255,153,.45);
+      stroke-width:1.6;
+      stroke-dasharray:9 8;
+      animation: dash 3.6s linear infinite;
+    }
+
+    @keyframes dash{
+      to{ stroke-dashoffset:-80; }
+    }
+
+    @keyframes pulseNode{
+      0%,100%{ opacity:.52; transform:scale(.92); }
+      50%{ opacity:1; transform:scale(1.1); }
+    }
+
+    .map-caption{
+      display:flex;
+      justify-content:space-between;
+      gap:14px;
+      align-items:center;
+      font-size:.78rem;
+      letter-spacing:.2em;
+      text-transform:uppercase;
+      color:var(--muted);
+    }
+
+    .core{
+      position:absolute;
+      left:50%;
+      top:50%;
+      width:min(24vw, 360px);
+      aspect-ratio:1;
+      transform:translate(-50%,-50%);
+      border-radius:50%;
+      pointer-events:none;
+      z-index:2;
+      opacity:.95;
+    }
+
+    .ring{
+      position:absolute;
+      inset:0;
+      border-radius:50%;
+      border:1px solid rgba(0,255,153,.18);
+      box-shadow:0 0 28px rgba(0,255,153,.08), inset 0 0 40px rgba(0,255,153,.05);
+      animation: spin 24s linear infinite;
+    }
+
+    .ring.r2{
+      inset:14%;
+      animation-duration:18s;
+      animation-direction:reverse;
+    }
+
+    .ring.r3{
+      inset:28%;
+      animation-duration:13s;
+    }
+
+    .core-glow{
+      position:absolute;
+      inset:36%;
+      border-radius:50%;
+      background:radial-gradient(circle, rgba(0,255,153,1), rgba(0,255,153,.18), transparent 72%);
+      filter:blur(12px);
+      animation: pulseCore 2.8s ease-in-out infinite;
+    }
+
+    .core-halo{
+      position:absolute;
+      inset:44%;
+      border-radius:50%;
+      border:1px solid rgba(0,255,153,.36);
+      box-shadow:0 0 22px rgba(0,255,153,.22);
+      animation: pulseHalo 4.2s ease-in-out infinite;
+    }
+
+    @keyframes spin{
+      from{ transform:rotate(0deg); }
+      to{ transform:rotate(360deg); }
+    }
+
+    @keyframes pulseCore{
+      0%,100%{ transform:scale(.92); opacity:.55; }
+      50%{ transform:scale(1.15); opacity:1; }
+    }
+
+    @keyframes pulseHalo{
+      0%,100%{ transform:scale(.95); opacity:.6; }
+      50%{ transform:scale(1.05); opacity:1; }
+    }
+
+    .footer{
+      position:relative;
+      z-index:3;
+      padding:0 30px 24px;
+      display:flex;
+      justify-content:space-between;
+      gap:16px;
+      align-items:center;
+      color:var(--muted);
+      font-size:.72rem;
+      letter-spacing:.24em;
+      text-transform:uppercase;
+    }
+
+    .footer strong{
+      color:var(--neon);
+      font-weight:600;
+    }
+
+    .glow-line{
+      height:1px;
+      margin:0 30px 18px;
+      background:linear-gradient(90deg, transparent, rgba(0,255,153,.24), transparent);
+    }
+
+    .mobile-note{
+      display:none;
+    }
+
+    @media (max-width: 1100px){
+      .hero,
+      .split{
+        grid-template-columns:1fr;
+      }
+
+      .core{
+        width:min(44vw, 320px);
+      }
+
+      .status{
+        min-width:0;
+      }
+    }
+
+    @media (max-width: 760px){
+      .wrap{
+        padding:0;
+      }
+
+      .shell{
+        min-height:100vh;
+        border:none;
+        border-radius:0;
+      }
+
+      .topbar{
+        padding:18px 16px 16px;
+        flex-direction:column;
+        align-items:flex-start;
+      }
+
+      .status{
+        align-items:flex-start;
+        text-align:left;
+      }
+
+      .hero{
+        padding:16px 16px 18px;
+      }
+
+      .split{
+        padding:0 16px 16px;
+      }
+
+      .footer{
+        padding:0 16px 18px;
+        flex-direction:column;
+        align-items:flex-start;
+      }
+
+      .logo{
+        letter-spacing:.24em;
+      }
+
+      .tagline{
+        letter-spacing:.2em;
+      }
+
+      .stat-grid{
+        grid-template-columns:1fr;
+      }
+
+      .core{
+        width:min(64vw, 260px);
+      }
+
+      .terminal{
+        height:180px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce){
+      *, *::before, *::after{
+        animation-duration:.001ms !important;
+        animation-iteration-count:1 !important;
+        transition:none !important;
+        scroll-behavior:auto !important;
+      }
+
+      .noise,
+      .scanbeam{
+        display:none;
+      }
+    }
+  </style>
 </head>
-
 <body>
+  <canvas id="bgCanvas" aria-hidden="true"></canvas>
+  <div class="noise" aria-hidden="true"></div>
+  <div class="scanbeam" aria-hidden="true"></div>
 
-<div class="noise"></div>
-<div class="scanlines"></div>
-<div class="scanbeam"></div>
+  <main class="wrap">
+    <section class="shell" aria-label="SERAPH landing page">
 
-<div class="container">
-
-    <div class="hud">
-
-        <div class="grid"></div>
-
-        <div class="header">
-            <div class="logo" data-text="SERAPH_AI">
-                SERAPH_AI
-            </div>
-
-            <div class="status">
-                SIGNAL INTELLIGENCE ACTIVE
-            </div>
+      <header class="topbar">
+        <div class="brand">
+          <div class="logo" data-text="SERAPH_AI">SERAPH_AI</div>
+          <div class="tagline">
+            Autonomous defence grid interface for intelligence, resilience, and high-trust signal operations.
+          </div>
         </div>
 
-        <!-- LEFT PANEL -->
+        <div class="status">
+          <div class="status-pill">Live cognitive relay</div>
+          <div class="clockline" id="clockline">UTC // --:--:--</div>
+        </div>
+      </header>
 
-        <div class="panel left">
+      <div class="hero">
+        <div class="hero-copy">
+          <div class="eyebrow">Classified synthetic intelligence layer</div>
+          <h1>
+            A premium cyber
+            <span>command experience</span>
+          </h1>
+          <p>
+            Built to feel like a live defence environment: entropy fields, predictive analytics, signal telemetry, encrypted relay states, and a central AI core with controlled motion. The layout is responsive from desktop to mobile and avoids fragile visual clutter.
+          </p>
 
-            <div class="panel-title">
-                THREAT MATRIX
-            </div>
-
-            <div class="metric">
-                <span>Entropy Field</span>
-                <span>97.44%</span>
-            </div>
-
-            <div class="metric">
-                <span>Neural Drift</span>
-                <span>STABLE</span>
-            </div>
-
-            <div class="metric">
-                <span>Quantum Tunnel</span>
-                <span>CONNECTED</span>
-            </div>
-
-            <div class="metric">
-                <span>SIGINT Mesh</span>
-                <span>LIVE</span>
-            </div>
-
-            <div class="metric">
-                <span>Zero Trust</span>
-                <span>ENFORCED</span>
-            </div>
-
-            <div class="bars">
-                <div class="bar"></div>
-                <div class="bar"></div>
-                <div class="bar"></div>
-                <div class="bar"></div>
-                <div class="bar"></div>
-                <div class="bar"></div>
-            </div>
-
+          <div class="actions">
+            <button class="btn" type="button" onclick="document.getElementById('terminal').scrollIntoView({behavior:'smooth', block:'center'})">
+              Inspect telemetry
+            </button>
+            <button class="btn secondary" type="button" onclick="document.querySelector('.map').scrollIntoView({behavior:'smooth', block:'center'})">
+              View threat map
+            </button>
+          </div>
         </div>
 
-        <!-- RIGHT PANEL -->
-
-        <div class="panel right">
-
-            <div class="panel-title">
-                CRYPTO ENGINE
+        <div class="hero-side">
+          <div class="card">
+            <div class="card-inner">
+              <div class="stat-grid">
+                <div class="stat">
+                  <label>Entropy field</label>
+                  <strong>98.41%</strong>
+                </div>
+                <div class="stat">
+                  <label>Signal integrity</label>
+                  <strong>STABLE</strong>
+                </div>
+                <div class="stat">
+                  <label>AI cognition</label>
+                  <strong>ACTIVE</strong>
+                </div>
+                <div class="stat">
+                  <label>Perimeter state</label>
+                  <strong>SEALED</strong>
+                </div>
+              </div>
             </div>
+          </div>
 
-            <div class="metric">
-                <span>AES-256</span>
-                <span>LOCKED</span>
+          <div class="card">
+            <div class="card-inner">
+              <div class="metric-list">
+                <div class="metric-row"><span>Zero-trust mesh</span><span>ENFORCED</span></div>
+                <div class="metric-row"><span>AES-256 relay</span><span>LOCKED</span></div>
+                <div class="metric-row"><span>ChaCha20 stream</span><span>ACTIVE</span></div>
+                <div class="metric-row"><span>Seraph tumbler</span><span class="warn">OBFUSCATED</span></div>
+                <div class="metric-row"><span>Hostile vector scan</span><span class="danger">MONITORING</span></div>
+              </div>
             </div>
-
-            <div class="metric">
-                <span>ChaCha20</span>
-                <span>ACTIVE</span>
-            </div>
-
-            <div class="metric">
-                <span>Forward Secrecy</span>
-                <span>VALID</span>
-            </div>
-
-            <div class="metric">
-                <span>AI Cipher Loop</span>
-                <span>SELF-EVOLVING</span>
-            </div>
-
-            <div class="metric">
-                <span>Seraph Tumbler</span>
-                <span>OBFUSCATED</span>
-            </div>
-
+          </div>
         </div>
+      </div>
 
-        <!-- CORE -->
+      <div class="core" aria-hidden="true">
+        <div class="ring"></div>
+        <div class="ring r2"></div>
+        <div class="ring r3"></div>
+        <div class="core-glow"></div>
+        <div class="core-halo"></div>
+      </div>
 
-        <div class="core-wrapper">
-            <div class="core"></div>
-        </div>
+      <div class="split">
+        <section class="panel">
+          <div class="panel-header">
+            <span>Live telemetry</span>
+            <span>stream // 01</span>
+          </div>
+          <div class="panel-body">
+            <div class="terminal" id="terminal" aria-live="polite"></div>
+          </div>
+        </section>
 
-        <!-- TERMINAL -->
+        <section class="panel">
+          <div class="panel-header">
+            <span>Dynamic threat map</span>
+            <span>sector grid // 04</span>
+          </div>
+          <div class="panel-body map-wrap">
+            <div class="map" aria-label="Threat map visualisation">
+              <svg viewBox="0 0 1000 640" preserveAspectRatio="none" role="img" aria-hidden="true">
+                <defs>
+                  <linearGradient id="routeGlow" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="rgba(0,255,153,.15)"/>
+                    <stop offset="50%" stop-color="rgba(0,255,153,.65)"/>
+                    <stop offset="100%" stop-color="rgba(0,255,153,.15)"/>
+                  </linearGradient>
+                </defs>
 
-        <div class="panel bottom">
+                <path class="line" d="M100 420 C180 300, 260 250, 355 260 S530 340, 650 210 S830 110, 910 160" fill="none" />
+                <path class="line" d="M165 145 C260 210, 335 230, 420 190 S610 70, 730 150 S860 280, 935 340" fill="none" />
+                <path class="line" d="M130 560 C240 480, 350 475, 460 500 S650 560, 760 470 S880 390, 940 455" fill="none" />
 
-            <div class="panel-title">
-                LIVE TELEMETRY
+                <circle class="node" cx="100" cy="420" r="9"></circle>
+                <circle class="node delay" cx="355" cy="260" r="10"></circle>
+                <circle class="node" cx="650" cy="210" r="11"></circle>
+                <circle class="node delay" cx="910" cy="160" r="9"></circle>
+
+                <circle class="node" cx="165" cy="145" r="8"></circle>
+                <circle class="node delay" cx="420" cy="190" r="10"></circle>
+                <circle class="node" cx="730" cy="150" r="9"></circle>
+                <circle class="node delay" cx="935" cy="340" r="10"></circle>
+
+                <circle class="node" cx="130" cy="560" r="8"></circle>
+                <circle class="node delay" cx="460" cy="500" r="10"></circle>
+                <circle class="node" cx="760" cy="470" r="9"></circle>
+                <circle class="node delay" cx="940" cy="455" r="8"></circle>
+              </svg>
             </div>
 
-            <div class="terminal" id="terminal"></div>
+            <div class="map-caption">
+              <span>Nodes self-adjust in real time</span>
+              <span>Adaptive response enabled</span>
+            </div>
+          </div>
+        </section>
+      </div>
 
-        </div>
+      <div class="glow-line"></div>
 
-        <div class="footer">
-            COGNITIVE WARFARE NETWORK // AI DEFENCE GRID
-        </div>
+      <footer class="footer">
+        <div><strong>SERAPH</strong> // autonomous cognitive grid</div>
+        <div>optimised for desktop and mobile deployment</div>
+      </footer>
+    </section>
+  </main>
 
-    </div>
-
-</div>
-
-<script>
-
-const terminal = document.getElementById('terminal');
-
-const lines = [
-
-"[SYS] Establishing encrypted SIGINT uplink...",
-"[AI] Neural lattice synchronised.",
-"[CORE] Entropy injection stabilised.",
-"[SEC] Adaptive countermeasure engine online.",
-"[NET] Dark relay mesh active.",
-"[AUTH] Quantum handshake validated.",
-"[SERAPH] Autonomous cognition thread initiated.",
-"[SCAN] Monitoring hostile surface vectors.",
-"[TRACE] Multi-spectrum telemetry streaming.",
-"[AI] Predictive threat engine learning."
-
-];
-
-let index = 0;
-
-function addLine(){
-
-    const div = document.createElement('div');
-    div.innerHTML = lines[index] + ' <span class="cursor"></span>';
-
-    terminal.appendChild(div);
-
-    terminal.scrollTop = terminal.scrollHeight;
-
-    index++;
-
-    if(index >= lines.length){
-        index = 0;
+  <script>
+    // Clock
+    const clockline = document.getElementById('clockline');
+    function tickClock() {
+      const d = new Date();
+      const pad = n => String(n).padStart(2, '0');
+      clockline.textContent = `UTC // ${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}`;
     }
+    tickClock();
+    setInterval(tickClock, 1000);
 
-    if(terminal.children.length > 8){
+    // Terminal feed
+    const terminal = document.getElementById('terminal');
+    const feed = [
+      "[SYS] Establishing encrypted relay chain...",
+      "[AI] Neural lattice synchronised.",
+      "[CORE] Entropy stabilised.",
+      "[SCAN] Hostile surface vectors under review.",
+      "[AUTH] Zero-trust verification complete.",
+      "[NET] Segmented mesh active.",
+      "[CRYPTO] AES-256 channel sealed.",
+      "[AI] Predictive threat modelling engaged.",
+      "[SIGINT] Passive signal collection online.",
+      "[SERAPH] Cognitive response loop initialised."
+    ];
+
+    let feedIndex = 0;
+
+    function pushTerminalLine() {
+      const line = document.createElement('div');
+      line.className = 'terminal-line';
+      line.textContent = feed[feedIndex];
+
+      const caret = document.createElement('span');
+      caret.className = 'cursor';
+      caret.setAttribute('aria-hidden', 'true');
+      line.appendChild(caret);
+
+      terminal.appendChild(line);
+      terminal.scrollTop = terminal.scrollHeight;
+
+      feedIndex = (feedIndex + 1) % feed.length;
+
+      while (terminal.children.length > 8) {
         terminal.removeChild(terminal.firstChild);
+      }
     }
 
-}
+    pushTerminalLine();
+    setInterval(pushTerminalLine, 1150);
 
-setInterval(addLine, 1200);
+    // Background particles with mobile optimisation
+    const canvas = document.getElementById('bgCanvas');
+    const ctx = canvas.getContext('2d', { alpha: true });
 
-</script>
+    let w = 0, h = 0;
+    let particles = [];
+    let mouse = { x: 0, y: 0, active: false };
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const isMobile = matchMedia('(max-width: 760px)').matches;
+    const count = reducedMotion ? 0 : (isMobile ? 56 : 132);
 
+    function resize() {
+      const dpr = Math.min(window.devicePixelRatio || 1, isMobile ? 1.2 : 1.6);
+      w = canvas.width = Math.floor(innerWidth * dpr);
+      h = canvas.height = Math.floor(innerHeight * dpr);
+      canvas.style.width = innerWidth + 'px';
+      canvas.style.height = innerHeight + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    function createParticles() {
+      particles = Array.from({ length: count }, () => ({
+        x: Math.random() * innerWidth,
+        y: Math.random() * innerHeight,
+        vx: (Math.random() - 0.5) * (isMobile ? 0.18 : 0.26),
+        vy: (Math.random() - 0.5) * (isMobile ? 0.18 : 0.26),
+        r: Math.random() * (isMobile ? 1.4 : 2.1) + 0.4
+      }));
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, innerWidth, innerHeight);
+
+      if (!reducedMotion) {
+        for (const p of particles) {
+          p.x += p.vx;
+          p.y += p.vy;
+
+          if (p.x < -10 || p.x > innerWidth + 10) p.vx *= -1;
+          if (p.y < -10 || p.y > innerHeight + 10) p.vy *= -1;
+
+          const dx = mouse.x - p.x;
+          const dy = mouse.y - p.y;
+          const dist = Math.hypot(dx, dy);
+
+          let alpha = 0.22;
+          let radius = p.r;
+
+          if (mouse.active && dist < (isMobile ? 110 : 150)) {
+            alpha = 0.56;
+            radius = p.r + 1.2;
+          }
+
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(0,255,153,${alpha})`;
+          ctx.fill();
+
+          if (mouse.active && dist < (isMobile ? 160 : 220)) {
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y);
+            ctx.lineTo(mouse.x, mouse.y);
+            ctx.strokeStyle = 'rgba(0,255,153,0.05)';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+          }
+        }
+      }
+
+      requestAnimationFrame(draw);
+    }
+
+    resize();
+    createParticles();
+    draw();
+
+    window.addEventListener('resize', () => {
+      resize();
+      createParticles();
+    });
+
+    window.addEventListener('pointermove', (e) => {
+      mouse.x = e.clientX;
+      mouse.y = e.clientY;
+      mouse.active = true;
+
+      if (!isMobile) {
+        const shell = document.querySelector('.shell');
+        const x = (e.clientX / innerWidth - 0.5) * 10;
+        const y = (e.clientY / innerHeight - 0.5) * 10;
+        shell.style.transform = `perspective(1200px) rotateX(${(-y * 0.15).toFixed(2)}deg) rotateY(${(x * 0.15).toFixed(2)}deg)`;
+      }
+    });
+
+    window.addEventListener('pointerleave', () => {
+      mouse.active = false;
+      const shell = document.querySelector('.shell');
+      shell.style.transform = 'none';
+    });
+
+    // Touch fallback
+    window.addEventListener('touchmove', (e) => {
+      const t = e.touches && e.touches[0];
+      if (!t) return;
+      mouse.x = t.clientX;
+      mouse.y = t.clientY;
+      mouse.active = true;
+    }, { passive: true });
+  </script>
 </body>
 </html>
