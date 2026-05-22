@@ -6,6 +6,8 @@
 <meta name="color-scheme" content="dark"/>
 <title>SERAPH // Sovereign Cyber Intelligence</title>
 
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; object-src 'none'; base-uri 'self';">
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@300;400;500;600;700&family=Bebas+Neue&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap" rel="stylesheet">
@@ -38,8 +40,6 @@
   --font-tech:"Share Tech Mono",monospace;
   --font-display:"Bebas Neue",sans-serif;
   --font-body:"Rajdhani",sans-serif;
-  --r:2px;
-  --r2:6px;
 }
 
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -55,7 +55,7 @@ body{
   cursor:none;
 }
 
-/* CUSTOM CURSOR */
+/* CUSTOM CURSOR - HARDWARE ACCELERATED */
 #cursor{
   position:fixed;
   width:18px;height:18px;
@@ -66,6 +66,8 @@ body{
   transform:translate(-50%,-50%);
   transition:width .18s,height .18s,background .18s,border-color .18s;
   mix-blend-mode:screen;
+  will-change: transform, width, height, background, border-color;
+  backface-visibility: hidden;
 }
 #cursor-dot{
   position:fixed;
@@ -76,6 +78,8 @@ body{
   z-index:9999;
   transform:translate(-50%,-50%);
   box-shadow:0 0 8px var(--neon);
+  will-change: transform;
+  backface-visibility: hidden;
 }
 body:has(a:hover) #cursor,
 body:has(button:hover) #cursor{
@@ -85,6 +89,11 @@ body:has(button:hover) #cursor{
 }
 
 /* BACKGROUND LAYERS */
+canvas {
+  max-width: 100vw;
+  max-height: 100vh;
+  display: block;
+}
 #hex-canvas,#matrix-canvas,#radar-canvas{
   position:fixed;inset:0;
   pointer-events:none;
@@ -497,21 +506,6 @@ nav{
 @keyframes critPulse{50%{opacity:.3}}
 .alert-text{flex:1;color:var(--white)}
 .alert-time{color:var(--muted);flex-shrink:0}
-
-/* ─── DIAGONAL DIVIDER ─── */
-.divider-diag{
-  width:100%;
-  height:80px;
-  background:linear-gradient(170deg,transparent 49.8%,rgba(0,255,136,.03) 50%);
-  position:relative;
-  z-index:5;
-}
-.divider-line{
-  height:1px;
-  background:linear-gradient(90deg,transparent,var(--neon-glow),transparent);
-  margin:0 auto;
-  width:80%;
-}
 
 /* ─── FEATURES SECTION ─── */
 .features{
@@ -1106,15 +1100,15 @@ footer{
   to{transform:translateX(-50%)}
 }
 
-/* GLITCH ANIMATION FOR TITLE */
+/* GLITCH ANIMATION FOR TITLE (Optimized Timing) */
 @keyframes glitch{
-  0%,90%,100%{text-shadow:0 0 40px rgba(0,255,136,.4),0 0 80px rgba(0,255,136,.15)}
-  92%{text-shadow:-2px 0 var(--red),2px 0 var(--cyan),0 0 40px rgba(0,255,136,.4)}
-  94%{text-shadow:2px 0 var(--red),-2px 0 var(--cyan),0 0 40px rgba(0,255,136,.4)}
-  96%{text-shadow:-1px 0 var(--cyan),1px 0 var(--red),0 0 40px rgba(0,255,136,.4)}
-  98%{text-shadow:0 0 40px rgba(0,255,136,.4),0 0 80px rgba(0,255,136,.15)}
+  0%,95%,100%{text-shadow:0 0 40px rgba(0,255,136,.4),0 0 80px rgba(0,255,136,.15)}
+  96%{text-shadow:-2px 0 var(--red),2px 0 var(--cyan),0 0 40px rgba(0,255,136,.4)}
+  97%{text-shadow:2px 0 var(--red),-2px 0 var(--cyan),0 0 40px rgba(0,255,136,.4)}
+  98%{text-shadow:-1px 0 var(--cyan),1px 0 var(--red),0 0 40px rgba(0,255,136,.4)}
+  99%{text-shadow:0 0 40px rgba(0,255,136,.4),0 0 80px rgba(0,255,136,.15)}
 }
-.hero-title .line-neon{animation:glitch 6s ease-in-out infinite}
+.hero-title .line-neon{animation:glitch 12s ease-in-out infinite}
 
 /* REDUCED MOTION */
 @media(prefers-reduced-motion:reduce){
@@ -1151,11 +1145,9 @@ footer{
 </head>
 <body>
 
-<!-- CURSOR -->
 <div id="cursor"></div>
 <div id="cursor-dot"></div>
 
-<!-- BACKGROUND CANVASES -->
 <canvas id="hex-canvas" aria-hidden="true"></canvas>
 <canvas id="matrix-canvas" aria-hidden="true"></canvas>
 <canvas id="radar-canvas" aria-hidden="true"></canvas>
@@ -1164,7 +1156,6 @@ footer{
 
 <div class="site">
 
-  <!-- NAV -->
   <nav aria-label="Main navigation">
     <a href="#" class="nav-logo" aria-label="SERAPH Home">SERAPH</a>
     <ul class="nav-links" role="list">
@@ -1179,7 +1170,6 @@ footer{
     </div>
   </nav>
 
-  <!-- HERO -->
   <section class="hero" aria-label="Hero">
 
     <div class="hero-left">
@@ -1239,7 +1229,6 @@ footer{
     </div>
   </section>
 
-  <!-- TICKER -->
   <div class="ticker-wrap" aria-hidden="true">
     <div class="ticker-track">
       <div class="ticker-item"><span class="dot"></span><strong>SERAPH</strong>Autonomous cognition online</div>
@@ -1250,7 +1239,6 @@ footer{
       <div class="ticker-item"><span class="dot"></span>AES-256 <strong>LOCKED</strong></div>
       <div class="ticker-item"><span class="dot"></span>Threat vectors <strong>SUPPRESSED</strong></div>
       <div class="ticker-item"><span class="dot"></span>Quantum relay <strong>NOMINAL</strong></div>
-      <!-- duplicate for seamless loop -->
       <div class="ticker-item"><span class="dot"></span><strong>SERAPH</strong>Autonomous cognition online</div>
       <div class="ticker-item"><span class="dot"></span>Entropy field <strong>STABILISED</strong></div>
       <div class="ticker-item"><span class="dot"></span>Zero-trust perimeter <strong>SEALED</strong></div>
@@ -1262,7 +1250,6 @@ footer{
     </div>
   </div>
 
-  <!-- FEATURES -->
   <section class="features" id="features" aria-label="Capabilities">
     <div class="section-header">
       <div class="section-eyebrow">Core capabilities</div>
@@ -1335,7 +1322,6 @@ footer{
     </div>
   </section>
 
-  <!-- THREAT DASHBOARD -->
   <section class="dashboard-section" id="dashboard" aria-label="Intelligence dashboard">
     <div class="section-header">
       <div class="section-eyebrow">Global threat intelligence</div>
@@ -1410,7 +1396,6 @@ footer{
     </div>
   </section>
 
-  <!-- PROTOCOLS -->
   <section class="protocols" id="protocols" aria-label="Security protocols">
     <div class="protocols-inner">
 
@@ -1502,7 +1487,6 @@ footer{
     </div>
   </section>
 
-  <!-- CTA -->
   <section class="cta-section" id="access" aria-label="Request access">
     <div class="cta-kicker">Clearance required</div>
     <h2 class="cta-title">
@@ -1511,13 +1495,12 @@ footer{
     <p class="cta-sub">SERAPH is deployed exclusively to verified defence contractors, national security agencies, and critical infrastructure operators.</p>
 
     <div class="cta-form" role="form" aria-label="Access request form">
-      <input type="email" class="cta-input" placeholder="// secure.contact@agency.mil" aria-label="Email address"/>
+      <input type="email" class="cta-input" placeholder="// secure.contact@agency.mil" aria-label="Email address" maxlength="50" pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$" required/>
       <button type="button" class="btn-primary" style="white-space:nowrap">Request clearance</button>
     </div>
     <div class="cta-note">All requests are vetted against national security criteria. Civilian access is not available.</div>
   </section>
 
-  <!-- FOOTER -->
   <footer>
     <div class="footer-logo">SERAPH</div>
     <ul class="footer-links" role="list">
@@ -1529,24 +1512,31 @@ footer{
     <div class="footer-copy">© 2026 SERAPH Systems // Classified</div>
   </footer>
 
-</div><!-- /site -->
+</div><script>
+// ─── PERFORMANCE TELEMETRY: TAB VISIBILITY ────────────────
+let isTabActive = true;
+document.addEventListener('visibilitychange', () => {
+  isTabActive = !document.hidden;
+});
 
-<script>
 // ─── CURSOR ───────────────────────────────────────────────
 const cursor = document.getElementById('cursor');
 const cursorDot = document.getElementById('cursor-dot');
 let mx=0,my=0,cx=0,cy=0;
 document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY});
 (function animCursor(){
-  cx+=(mx-cx)*.18; cy+=(my-cy)*.18;
-  cursor.style.left=mx+'px'; cursor.style.top=my+'px';
-  cursorDot.style.left=mx+'px'; cursorDot.style.top=my+'px';
+  if(isTabActive) {
+    cx+=(mx-cx)*.18; cy+=(my-cy)*.18;
+    cursor.style.transform=`translate(calc(-50% + ${mx}px), calc(-50% + ${my}px))`;
+    cursorDot.style.transform=`translate(calc(-50% + ${mx}px), calc(-50% + ${my}px))`;
+  }
   requestAnimationFrame(animCursor);
 })();
 
 // ─── CLOCK ────────────────────────────────────────────────
 const navClock=document.getElementById('nav-clock');
 function tickClock(){
+  if(!isTabActive) return;
   const d=new Date();
   const p=n=>String(n).padStart(2,'0');
   navClock.textContent=`UTC // ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}:${p(d.getUTCSeconds())} // ONLINE`;
@@ -1608,6 +1598,7 @@ function initMatrix(){
 initMatrix();
 window.addEventListener('resize',initMatrix);
 function drawMatrix(){
+  if(!isTabActive) return;
   mctx.fillStyle='rgba(0,0,0,.04)';
   mctx.fillRect(0,0,matCanvas.width,matCanvas.height);
   mctx.fillStyle='#00ff88';
@@ -1632,7 +1623,6 @@ function initRadar(){
 }
 initRadar();
 window.addEventListener('resize',initRadar);
-// Spawn blips around a center radar (bottom right)
 const RC={x:()=>radCanvas.width-140,y:()=>radCanvas.height-140,r:110};
 for(let i=0;i<12;i++){
   const a=Math.random()*Math.PI*2;
@@ -1640,346 +1630,15 @@ for(let i=0;i<12;i++){
   radBlips.push({a,r,life:0,maxLife:Math.random()*180+60});
 }
 function drawRadar(){
+  if(!isTabActive) { requestAnimationFrame(drawRadar); return; }
   rctx.clearRect(0,0,radCanvas.width,radCanvas.height);
   const cx=RC.x(),cy=RC.y(),cr=RC.r;
-  // rings
+  
   rctx.strokeStyle='rgba(0,255,136,.14)';
   rctx.lineWidth=1;
   [.33,.66,1].forEach(f=>{
     rctx.beginPath();rctx.arc(cx,cy,cr*f,0,Math.PI*2);rctx.stroke();
   });
-  // cross
+  
   rctx.beginPath();rctx.moveTo(cx-cr,cy);rctx.lineTo(cx+cr,cy);rctx.stroke();
-  rctx.beginPath();rctx.moveTo(cx,cy-cr);rctx.lineTo(cx,cy+cr);rctx.stroke();
-  // sweep
-  const grad=rctx.createConicalGradient?rctx.createConicalGradient(cx,cy,radAngle):null;
-  rctx.save();
-  rctx.beginPath();rctx.arc(cx,cy,cr,radAngle-1.2,radAngle);
-  rctx.lineTo(cx,cy);rctx.closePath();
-  rctx.fillStyle='rgba(0,255,136,.18)';
-  rctx.fill();
-  // beam line
-  rctx.beginPath();
-  rctx.moveTo(cx,cy);
-  rctx.lineTo(cx+Math.cos(radAngle)*cr,cy+Math.sin(radAngle)*cr);
-  rctx.strokeStyle='rgba(0,255,136,.7)';rctx.lineWidth=1.5;
-  rctx.stroke();
-  rctx.restore();
-  // blips
-  radBlips.forEach(b=>{
-    b.life++;
-    if(b.life>b.maxLife){b.life=0;b.a=Math.random()*Math.PI*2;b.r=Math.random()*cr*.9;}
-    const diff=((radAngle-b.a)%(Math.PI*2)+Math.PI*2)%(Math.PI*2);
-    if(diff<1.3){
-      const alpha=Math.max(0,1-diff/1.3)*0.85;
-      const bx=cx+Math.cos(b.a)*b.r;
-      const by=cy+Math.sin(b.a)*b.r;
-      rctx.beginPath();rctx.arc(bx,by,2.5,0,Math.PI*2);
-      rctx.fillStyle=`rgba(0,255,136,${alpha})`;rctx.fill();
-    }
-  });
-  radAngle+=0.018;
-  requestAnimationFrame(drawRadar);
-}
-drawRadar();
-
-// ─── THREE.JS ORB ─────────────────────────────────────────
-(function(){
-  const c=document.getElementById('three-canvas');
-  if(!c||!window.THREE)return;
-  const scene=new THREE.Scene();
-  const camera=new THREE.PerspectiveCamera(40,1,.1,100);
-  camera.position.set(0,0,6);
-  const renderer=new THREE.WebGLRenderer({canvas:c,alpha:true,antialias:true});
-  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
-  renderer.setClearColor(0,0);
-  renderer.setSize(340,340);
-
-  scene.add(new THREE.AmbientLight(0x99ffdd,1.2));
-  const dl=new THREE.DirectionalLight(0x00ff88,2.2);dl.position.set(3,4,5);scene.add(dl);
-  const pl=new THREE.PointLight(0x17f3e8,1.8,30);pl.position.set(-4,-2,4);scene.add(pl);
-  const pl2=new THREE.PointLight(0xff2d5b,.8,20);pl2.position.set(0,3,3);scene.add(pl2);
-
-  const g=new THREE.Group();scene.add(g);
-
-  // Core icosahedron
-  const icoGeo=new THREE.IcosahedronGeometry(1.3,2);
-  g.add(new THREE.Mesh(icoGeo,new THREE.MeshStandardMaterial({
-    color:0x03150a,emissive:0x00ff88,emissiveIntensity:.7,
-    metalness:.3,roughness:.2,transparent:true,opacity:.22
-  })));
-  g.add(new THREE.Mesh(icoGeo,new THREE.MeshBasicMaterial({
-    color:0x00ff88,wireframe:true,transparent:true,opacity:.18
-  })));
-
-  // Rings
-  [[2.1,.04,0x00ff88,.4,0,Math.PI/2,0],[2.5,.025,0x17f3e8,.2,Math.PI/2,0,0],
-   [1.6,.02,0xff2d5b,.15,Math.PI/3,0,Math.PI/6]].forEach(([r,t,col,op,rx,ry,rz])=>{
-    const m=new THREE.Mesh(new THREE.TorusGeometry(r,t,12,256),
-      new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:op}));
-    m.rotation.set(rx,ry,rz);g.add(m);
-  });
-
-  // Knot
-  const knot=new THREE.Mesh(new THREE.TorusKnotGeometry(1.3,.065,220,24),
-    new THREE.MeshBasicMaterial({color:0x00cc6e,transparent:true,opacity:.22}));
-  g.add(knot);
-
-  // Particles
-  const pPos=new Float32Array(320*3);
-  for(let i=0;i<320;i++){
-    const r=3.2+Math.random()*3;
-    const th=Math.random()*Math.PI*2,ph=Math.acos(2*Math.random()-1);
-    pPos[i*3]=r*Math.sin(ph)*Math.cos(th);
-    pPos[i*3+1]=r*Math.sin(ph)*Math.sin(th);
-    pPos[i*3+2]=r*Math.cos(ph);
-  }
-  const pGeo=new THREE.BufferGeometry();
-  pGeo.setAttribute('position',new THREE.BufferAttribute(pPos,3));
-  g.add(new THREE.Points(pGeo,new THREE.PointsMaterial({color:0x00ff88,size:.022,transparent:true,opacity:.72,depthWrite:false})));
-
-  const [r1,r2,r3]=g.children.filter(o=>o.type==='Mesh'&&o.geometry.type==='TorusGeometry');
-
-  function anim(){
-    g.rotation.y+=.003;g.rotation.x+=.001;
-    if(r1)r1.rotation.z+=.006;
-    if(r2)r2.rotation.x-=.004;
-    if(r3)r3.rotation.y+=.008;
-    knot.rotation.x+=.004;knot.rotation.y-=.003;
-    renderer.render(scene,camera);requestAnimationFrame(anim);
-  }
-  anim();
-})();
-
-// ─── TERMINAL ─────────────────────────────────────────────
-const termEl=document.getElementById('terminal');
-const lines=[
-  {c:'term-line','t':'[SYS]  Relay chain established…'},
-  {c:'term-line active','t':'[AUTH] Zero-trust verification  ✓'},
-  {c:'term-line','t':'[AI]   Neural lattice synchronised'},
-  {c:'term-line warn','t':'[SCAN] Anomaly detected: AS48280'},
-  {c:'term-line active','t':'[RESP] Quarantine deployed 14ms'},
-  {c:'term-line','t':'[CRYP] Key rotation complete'},
-  {c:'term-line err','t':'[WARN] Exfil attempt: suppressed'},
-  {c:'term-line active','t':'[SERAPH] Autonomous  // online'},
-];
-let ti=0;
-function pushTermLine(){
-  if(!termEl)return;
-  const d=document.createElement('div');
-  d.className=lines[ti].c;
-  d.textContent=lines[ti].t;
-  const cur=document.createElement('span');cur.className='term-cursor';
-  d.appendChild(cur);
-  termEl.appendChild(d);
-  while(termEl.children.length>5)termEl.removeChild(termEl.firstChild);
-  termEl.scrollTop=termEl.scrollHeight;
-  ti=(ti+1)%lines.length;
-}
-pushTermLine();setInterval(pushTermLine,1200);
-
-// ─── LIVE ALERTS ──────────────────────────────────────────
-const alertDefs=[
-  {cls:'ok',txt:'Zero-trust verification passed',src:'AUTH'},
-  {cls:'ok',txt:'AES-256 relay sealed',src:'CRYP'},
-  {cls:'warn',txt:'Suspicious beacon: 185.220.x.x',src:'SIGINT'},
-  {cls:'crit',txt:'SQLi attempt blocked — node 7',src:'WAF'},
-  {cls:'ok',txt:'Entropy field stabilised',src:'CORE'},
-  {cls:'warn',txt:'Lateral move attempted',src:'EDR'},
-  {cls:'crit',txt:'Credential spray — 8k req/s',src:'NET'},
-  {cls:'ok',txt:'Deception trap triggered',src:'HONEYP'},
-];
-const alertList=document.getElementById('alertList');
-let ai=0;
-function pushAlert(){
-  if(!alertList)return;
-  const a=alertDefs[Math.floor(Math.random()*alertDefs.length)];
-  const t=new Date();
-  const p=n=>String(n).padStart(2,'0');
-  const time=`${p(t.getUTCHours())}:${p(t.getUTCMinutes())}:${p(t.getUTCSeconds())}`;
-  const el=document.createElement('div');
-  el.className=`alert-item ${a.cls}`;
-  el.innerHTML=`<div class="alert-dot"></div><span class="alert-text">[${a.src}] ${a.txt}</span><span class="alert-time">${time}</span>`;
-  el.style.opacity='0';el.style.transform='translateX(12px)';el.style.transition='opacity .3s,transform .3s';
-  alertList.appendChild(el);
-  requestAnimationFrame(()=>{el.style.opacity='1';el.style.transform='none'});
-  while(alertList.children.length>3)alertList.removeChild(alertList.firstChild);
-}
-pushAlert();setInterval(pushAlert,2200);
-
-// ─── DASHBOARD METRICS ────────────────────────────────────
-let blocked=0,rate=0;
-const bigBlocked=document.getElementById('big-blocked');
-const bigRate=document.getElementById('big-rate');
-const mapCount=document.getElementById('map-count');
-const activeAttacks=document.getElementById('active-attacks');
-
-function updateDash(){
-  blocked+=Math.floor(Math.random()*18+4);
-  rate=Math.floor(Math.random()*90+40);
-  if(bigBlocked)bigBlocked.textContent=blocked.toLocaleString();
-  if(bigRate)bigRate.textContent=`▲ +${rate}/min ingested`;
-  const active=Math.floor(Math.random()*280+120);
-  if(mapCount)mapCount.textContent=`${active} ACTIVE VECTORS`;
-  if(activeAttacks)activeAttacks.textContent=active;
-}
-updateDash();setInterval(updateDash,3000);
-
-// ─── STAT BARS ANIMATION ──────────────────────────────────
-function jitterBars(){
-  const vals=[
-    [42,28,18,12],
-  ].map(()=>[
-    Math.floor(Math.random()*15+36),
-    Math.floor(Math.random()*10+24),
-    Math.floor(Math.random()*8+14),
-    Math.floor(Math.random()*6+9),
-  ])[0];
-  const total=vals.reduce((a,b)=>a+b,0);
-  vals.forEach((v,i)=>{
-    const pct=Math.round(v/total*100);
-    const sv=document.getElementById(`sv${i+1}`);
-    const sb=document.getElementById(`sb${i+1}`);
-    if(sv)sv.textContent=pct+'%';
-    if(sb)sb.style.width=pct+'%';
-  });
-}
-setInterval(jitterBars,4000);
-
-// ─── MINI GRAPH ───────────────────────────────────────────
-const miniGraph=document.getElementById('miniGraph');
-if(miniGraph){
-  const heights=Array.from({length:18},()=>Math.random()*100);
-  heights.forEach(h=>{
-    const b=document.createElement('div');
-    b.className='bar';
-    b.style.height=h+'%';
-    miniGraph.appendChild(b);
-  });
-  setInterval(()=>{
-    Array.from(miniGraph.children).forEach((b,i)=>{
-      b.style.height=(Math.random()*90+10)+'%';
-      b.style.transition='height .5s ease';
-    });
-  },1800);
-}
-
-// ─── PROTOCOL TILES ANIMATION ─────────────────────────────
-const pEntropy=document.getElementById('p-entropy');
-const pLatency=document.getElementById('p-latency');
-const pLoss=document.getElementById('p-loss');
-let ent=98.4,lat=18,loss=.02;
-setInterval(()=>{
-  ent=Math.max(96,Math.min(99.99,ent+(Math.random()-.45)));
-  lat=Math.max(8,Math.min(34,lat+(Math.random()-.5)*3));
-  loss=Math.max(.01,Math.min(.12,loss+(Math.random()-.5)*.01));
-  if(pEntropy)pEntropy.textContent=ent.toFixed(1)+'%';
-  if(pLatency)pLatency.textContent=Math.round(lat)+'ms';
-  if(pLoss)pLoss.textContent=loss.toFixed(2)+'%';
-},2000);
-
-// ─── WORLD MAP (threat dots) ──────────────────────────────
-const worldCanvas=document.getElementById('worldCanvas');
-if(worldCanvas){
-  const wctx=worldCanvas.getContext('2d');
-  const attacks=[];
-  function latLonToXY(lat,lon,w,h){
-    return{x:(lon+180)/360*w,y:(90-lat)/180*h};
-  }
-  const cities=[
-    [51.5,-.09],[40.7,-74],[35.7,139.7],[37.8,-122.4],
-    [-33.9,151.2],[48.8,2.3],[55.7,37.6],[31.2,121.5],
-    [19.4,-99.1],[28.6,77.2],[-23.5,-46.6],[1.3,103.8],
-    [52.5,13.4],[41.9,12.5],[59.9,30.3],[50.1,8.7],
-  ];
-  function spawnAttack(){
-    const src=cities[Math.floor(Math.random()*cities.length)];
-    const dst=cities[Math.floor(Math.random()*cities.length)];
-    attacks.push({
-      slat:src[0],slon:src[1],
-      dlat:dst[0],dlon:dst[1],
-      prog:0,speed:.015+(Math.random()*.01),
-      col:Math.random()>.7?'#ff2d5b':Math.random()>.5?'#ffaa00':'#00ff88',
-    });
-  }
-  for(let i=0;i<6;i++)spawnAttack();
-  setInterval(spawnAttack,1200);
-
-  function drawWorld(){
-    const W=worldCanvas.clientWidth,H=worldCanvas.clientHeight;
-    if(worldCanvas.width!==W||worldCanvas.height!==H){
-      worldCanvas.width=W;worldCanvas.height=H;
-    }
-    wctx.clearRect(0,0,W,H);
-
-    // grid
-    wctx.strokeStyle='rgba(0,255,136,.06)';wctx.lineWidth=1;
-    for(let x=0;x<W;x+=W/12){wctx.beginPath();wctx.moveTo(x,0);wctx.lineTo(x,H);wctx.stroke()}
-    for(let y=0;y<H;y+=H/6){wctx.beginPath();wctx.moveTo(0,y);wctx.lineTo(W,y);wctx.stroke()}
-
-    // city dots
-    cities.forEach(([lat,lon])=>{
-      const{x,y}=latLonToXY(lat,lon,W,H);
-      wctx.beginPath();wctx.arc(x,y,2.5,0,Math.PI*2);
-      wctx.fillStyle='rgba(0,255,136,.5)';wctx.fill();
-      wctx.beginPath();wctx.arc(x,y,5,0,Math.PI*2);
-      wctx.strokeStyle='rgba(0,255,136,.15)';wctx.lineWidth=1;wctx.stroke();
-    });
-
-    // attack arcs
-    attacks.forEach((a,idx)=>{
-      a.prog+=a.speed;
-      const{x:sx,y:sy}=latLonToXY(a.slat,a.slon,W,H);
-      const{x:dx,y:dy}=latLonToXY(a.dlat,a.dlon,W,H);
-      const mx=(sx+dx)/2,my=(sy+dy)/2-Math.hypot(dx-sx,dy-sy)*.38;
-
-      const t=Math.min(a.prog,1);
-      const pt=(u)=>({
-        x:(1-u)**2*sx+2*(1-u)*u*mx+u**2*dx,
-        y:(1-u)**2*sy+2*(1-u)*u*my+u**2*dy,
-      });
-
-      wctx.beginPath();
-      for(let u=0;u<=t;u+=.02){
-        const p=pt(u);
-        u===0?wctx.moveTo(p.x,p.y):wctx.lineTo(p.x,p.y);
-      }
-      wctx.strokeStyle=a.col.replace(')',','+(.6*(1-t*.3))+')').replace('rgb','rgba').replace('#','');
-
-      // simple hex to rgba
-      const hex=a.col.slice(1);
-      const r=parseInt(hex.slice(0,2),16),g2=parseInt(hex.slice(2,4),16),b=parseInt(hex.slice(4,6),16);
-      wctx.strokeStyle=`rgba(${r},${g2},${b},${.7*(1-t*.3)})`;
-      wctx.lineWidth=1.2;wctx.stroke();
-
-      // head dot
-      const head=pt(t);
-      wctx.beginPath();wctx.arc(head.x,head.y,2,0,Math.PI*2);
-      wctx.fillStyle=a.col;wctx.fill();
-
-      if(a.prog>=1){attacks.splice(idx,1)}
-    });
-    requestAnimationFrame(drawWorld);
-  }
-  drawWorld();
-}
-
-// ─── SCROLL REVEAL ────────────────────────────────────────
-const reveals=document.querySelectorAll('.feature-card,.stat-block,.big-stat,.proto-item,.proto-tile');
-const observer=new IntersectionObserver(entries=>{
-  entries.forEach(e=>{
-    if(e.isIntersecting){
-      e.target.style.opacity='1';
-      e.target.style.transform='translateY(0)';
-    }
-  });
-},{threshold:.12});
-reveals.forEach(el=>{
-  el.style.opacity='0';
-  el.style.transform='translateY(22px)';
-  el.style.transition='opacity .6s ease,transform .6s ease';
-  observer.observe(el);
-});
-</script>
-</body>
-</html>
+  rctx.beginPath();rctx.moveTo(cx,cy-cr);rctx.lineTo(cx,cy+cr);
