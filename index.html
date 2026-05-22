@@ -1,0 +1,1167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="color-scheme" content="dark"/>
+<meta name="referrer" content="no-referrer"/>
+
+<meta http-equiv="Content-Security-Policy"
+content="
+default-src 'self';
+base-uri 'self';
+object-src 'none';
+form-action 'self';
+img-src 'self' data:;
+font-src https://fonts.gstatic.com;
+style-src 'self' https://fonts.googleapis.com 'unsafe-inline';
+script-src 'self' https://cdn.jsdelivr.net 'unsafe-inline';
+connect-src 'self';
+">
+
+<title>SERAPH // Sovereign Cyber Intelligence</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@300;400;500;600;700&family=Bebas+Neue&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap" rel="stylesheet">
+
+<script defer src="https://cdn.jsdelivr.net/npm/three@0.184.0/build/three.min.js"></script>
+
+<style>
+:root{
+  --bg:#000;
+  --neon:#00ff88;
+  --cyan:#17f3e8;
+  --red:#ff2d5b;
+  --amber:#ffaa00;
+  --white:#e8fff4;
+  --muted:#4a7a66;
+  --glass:rgba(0,20,12,.72);
+  --glass2:rgba(0,10,6,.85);
+  --border:rgba(0,255,136,.1);
+  --border-bright:rgba(0,255,136,.28);
+
+  --font-mono:"JetBrains Mono",monospace;
+  --font-tech:"Share Tech Mono",monospace;
+  --font-display:"Bebas Neue",sans-serif;
+  --font-body:"Rajdhani",sans-serif;
+}
+
+*,*::before,*::after{
+  box-sizing:border-box;
+  margin:0;
+  padding:0;
+}
+
+html{
+  scroll-behavior:smooth;
+}
+
+body{
+  background:#000;
+  color:var(--white);
+  font-family:var(--font-body);
+  overflow-x:hidden;
+  min-height:100vh;
+  cursor:none;
+}
+
+canvas{
+  display:block;
+  max-width:100%;
+}
+
+a{
+  color:inherit;
+}
+
+#cursor,
+#cursor-dot{
+  position:fixed;
+  pointer-events:none;
+  z-index:9999;
+  transform:translate(-50%,-50%);
+}
+
+#cursor{
+  width:18px;
+  height:18px;
+  border:1.5px solid var(--neon);
+  border-radius:50%;
+  transition:.18s;
+}
+
+#cursor-dot{
+  width:4px;
+  height:4px;
+  border-radius:50%;
+  background:var(--neon);
+  box-shadow:0 0 8px var(--neon);
+}
+
+body:has(a:hover) #cursor,
+body:has(button:hover) #cursor{
+  width:36px;
+  height:36px;
+  background:rgba(0,255,136,.06);
+  border-color:var(--cyan);
+}
+
+@media (pointer:coarse),(hover:none){
+  body{
+    cursor:auto;
+  }
+
+  #cursor,
+  #cursor-dot{
+    display:none;
+  }
+}
+
+#hex-canvas,
+#matrix-canvas,
+#radar-canvas{
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+}
+
+#hex-canvas{opacity:.18;z-index:0;}
+#matrix-canvas{opacity:.06;z-index:1;}
+#radar-canvas{opacity:.22;z-index:2;}
+
+.scanline-overlay{
+  position:fixed;
+  inset:0;
+  z-index:3;
+  pointer-events:none;
+
+  background:repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,255,136,.015) 2px,
+    rgba(0,255,136,.015) 4px
+  );
+
+  animation:scanRoll 8s linear infinite;
+}
+
+@keyframes scanRoll{
+  from{background-position:0 0}
+  to{background-position:0 200px}
+}
+
+.vignette{
+  position:fixed;
+  inset:0;
+  z-index:4;
+  pointer-events:none;
+
+  background:
+    radial-gradient(
+      ellipse at center,
+      transparent 42%,
+      rgba(0,0,0,.84) 100%
+    );
+}
+
+.site{
+  position:relative;
+  z-index:5;
+}
+
+nav{
+  position:fixed;
+  top:0;
+  left:0;
+  right:0;
+  z-index:200;
+
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+
+  padding:18px 48px;
+
+  backdrop-filter:blur(6px);
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(0,5,3,.92) 0%,
+      transparent 100%
+    );
+
+  border-bottom:1px solid rgba(0,255,136,.06);
+}
+
+.nav-logo{
+  position:relative;
+
+  font-family:var(--font-display);
+  font-size:2rem;
+  letter-spacing:.28em;
+  text-decoration:none;
+
+  color:var(--neon);
+
+  text-shadow:
+    0 0 24px rgba(0,255,136,.35),
+    0 0 60px rgba(0,255,136,.12);
+}
+
+.nav-logo::after{
+  content:"v4.1.0";
+
+  position:absolute;
+  right:-44px;
+  top:4px;
+
+  font-family:var(--font-mono);
+  font-size:.48rem;
+  color:var(--muted);
+}
+
+.nav-links{
+  display:flex;
+  gap:36px;
+  list-style:none;
+}
+
+.nav-links a{
+  position:relative;
+
+  font-family:var(--font-tech);
+  font-size:.78rem;
+  letter-spacing:.24em;
+  text-transform:uppercase;
+  text-decoration:none;
+
+  color:var(--muted);
+
+  transition:.2s;
+}
+
+.nav-links a::before{
+  content:"";
+
+  position:absolute;
+  left:0;
+  right:0;
+  bottom:-4px;
+
+  height:1px;
+
+  background:var(--neon);
+
+  transform:scaleX(0);
+  transform-origin:left;
+
+  transition:transform .24s;
+}
+
+.nav-links a:hover{
+  color:var(--neon);
+}
+
+.nav-links a:hover::before{
+  transform:scaleX(1);
+}
+
+.nav-status{
+  display:flex;
+  align-items:center;
+  gap:12px;
+
+  font-family:var(--font-tech);
+  font-size:.72rem;
+  letter-spacing:.18em;
+
+  color:var(--muted);
+}
+
+.status-dot{
+  width:8px;
+  height:8px;
+  border-radius:50%;
+
+  background:var(--neon);
+
+  box-shadow:0 0 10px var(--neon);
+
+  animation:dotPulse 2.4s ease-in-out infinite;
+}
+
+@keyframes dotPulse{
+  50%{
+    opacity:.4;
+  }
+}
+
+.hero{
+  min-height:100vh;
+
+  display:grid;
+  grid-template-columns:1fr 1fr;
+
+  overflow:hidden;
+}
+
+.hero-left{
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+
+  padding:140px 48px 80px 64px;
+
+  position:relative;
+  z-index:10;
+}
+
+.hero-eyebrow{
+  margin-bottom:28px;
+
+  font-family:var(--font-tech);
+  font-size:.72rem;
+  letter-spacing:.38em;
+  text-transform:uppercase;
+
+  color:var(--neon);
+}
+
+.hero-title{
+  font-family:var(--font-display);
+  font-size:clamp(5rem,9vw,11rem);
+  line-height:.88;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+}
+
+.line-accent{
+  display:block;
+
+  color:transparent;
+  -webkit-text-stroke:1px rgba(0,255,136,.5);
+}
+
+.line-neon{
+  display:block;
+
+  color:var(--neon);
+
+  text-shadow:
+    0 0 40px rgba(0,255,136,.4),
+    0 0 80px rgba(0,255,136,.15);
+
+  animation:glitch 10s ease-in-out infinite;
+}
+
+@keyframes glitch{
+  92%{
+    text-shadow:-2px 0 var(--red),2px 0 var(--cyan);
+  }
+  94%{
+    text-shadow:2px 0 var(--red),-2px 0 var(--cyan);
+  }
+}
+
+.hero-sub{
+  max-width:60ch;
+
+  margin:28px 0 44px;
+
+  font-size:1.1rem;
+  line-height:1.85;
+  letter-spacing:.04em;
+
+  color:rgba(232,255,244,.55);
+}
+
+.hero-sub strong{
+  color:var(--neon);
+}
+
+.hero-cta{
+  display:flex;
+  gap:16px;
+  flex-wrap:wrap;
+}
+
+.btn-primary,
+.btn-ghost{
+  display:inline-block;
+
+  padding:16px 32px;
+
+  font-family:var(--font-tech);
+  font-size:.78rem;
+  letter-spacing:.3em;
+  text-transform:uppercase;
+  text-decoration:none;
+
+  clip-path:
+    polygon(
+      0 0,
+      calc(100% - 10px) 0,
+      100% 10px,
+      100% 100%,
+      10px 100%,
+      0 calc(100% - 10px)
+    );
+}
+
+.btn-primary{
+  border:none;
+
+  background:var(--neon);
+  color:#000;
+}
+
+.btn-ghost{
+  background:transparent;
+  color:var(--neon);
+
+  border:1px solid rgba(0,255,136,.24);
+}
+
+.hero-right{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:18px;
+
+  padding:120px 48px 80px 0;
+}
+
+.threat-orb-wrap{
+  position:relative;
+  width:340px;
+  height:340px;
+}
+
+#three-canvas{
+  position:absolute;
+  inset:0;
+  width:100%!important;
+  height:100%!important;
+}
+
+.glass-card{
+  width:100%;
+  max-width:360px;
+
+  padding:20px 24px;
+
+  border:1px solid var(--border);
+
+  background:var(--glass);
+
+  backdrop-filter:blur(12px);
+}
+
+.glass-card-title{
+  margin-bottom:14px;
+
+  font-family:var(--font-tech);
+  font-size:.68rem;
+  letter-spacing:.3em;
+  text-transform:uppercase;
+
+  color:var(--muted);
+}
+
+.terminal-card{
+  max-height:110px;
+  overflow:hidden;
+
+  font-family:var(--font-mono);
+  font-size:.78rem;
+  line-height:1.7;
+
+  color:#5aff9e;
+}
+
+.term-line{
+  color:#2a6a48;
+}
+
+.term-line.active{
+  color:#5aff9e;
+}
+
+.term-line.warn{
+  color:var(--amber);
+}
+
+.term-line.err{
+  color:var(--red);
+}
+
+.term-cursor{
+  display:inline-block;
+  width:7px;
+  height:13px;
+
+  margin-left:4px;
+
+  background:#5aff9e;
+
+  animation:termBlink .9s steps(1) infinite;
+}
+
+@keyframes termBlink{
+  50%{
+    opacity:0;
+  }
+}
+
+.alert-list{
+  display:grid;
+  gap:8px;
+}
+
+.alert-item{
+  display:flex;
+  align-items:center;
+  gap:12px;
+
+  padding:10px 12px;
+
+  border:1px solid rgba(255,255,255,.04);
+  border-left:2px solid;
+
+  background:rgba(0,0,0,.3);
+
+  font-family:var(--font-tech);
+  font-size:.72rem;
+  letter-spacing:.12em;
+}
+
+.alert-item.ok{
+  border-left-color:var(--neon);
+}
+
+.alert-item.warn{
+  border-left-color:var(--amber);
+}
+
+.alert-item.crit{
+  border-left-color:var(--red);
+}
+
+.alert-dot{
+  width:6px;
+  height:6px;
+  border-radius:50%;
+  flex-shrink:0;
+}
+
+.alert-item.ok .alert-dot{
+  background:var(--neon);
+}
+
+.alert-item.warn .alert-dot{
+  background:var(--amber);
+}
+
+.alert-item.crit .alert-dot{
+  background:var(--red);
+}
+
+.alert-text{
+  flex:1;
+}
+
+.alert-time{
+  color:var(--muted);
+}
+
+.cta-section{
+  padding:120px 64px;
+  text-align:center;
+}
+
+.cta-title{
+  font-family:var(--font-display);
+  font-size:clamp(4rem,8vw,9rem);
+  line-height:.9;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+
+.outline{
+  color:transparent;
+  -webkit-text-stroke:1px rgba(0,255,136,.35);
+}
+
+.cta-sub{
+  max-width:52ch;
+
+  margin:24px auto 44px;
+
+  line-height:1.9;
+
+  color:rgba(232,255,244,.4);
+}
+
+.cta-form{
+  display:flex;
+  justify-content:center;
+
+  max-width:520px;
+  margin:0 auto;
+}
+
+.cta-input{
+  flex:1;
+
+  padding:16px 20px;
+
+  border:1px solid var(--border);
+  border-right:none;
+
+  background:rgba(0,20,12,.8);
+
+  color:var(--white);
+
+  font-family:var(--font-mono);
+}
+
+footer{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:24px;
+
+  padding:40px 64px;
+
+  border-top:1px solid var(--border);
+}
+
+.footer-logo{
+  font-family:var(--font-display);
+  font-size:1.6rem;
+  letter-spacing:.32em;
+
+  color:var(--neon);
+}
+
+.footer-links{
+  display:flex;
+  gap:28px;
+
+  list-style:none;
+}
+
+.footer-links a{
+  text-decoration:none;
+
+  font-family:var(--font-tech);
+  font-size:.68rem;
+  letter-spacing:.24em;
+  text-transform:uppercase;
+
+  color:var(--muted);
+}
+
+.footer-copy{
+  font-family:var(--font-tech);
+  font-size:.66rem;
+  letter-spacing:.2em;
+  text-transform:uppercase;
+
+  color:#2a4a3a;
+}
+
+@media(prefers-reduced-motion:reduce){
+  *,
+  *::before,
+  *::after{
+    animation:none!important;
+    transition:none!important;
+  }
+
+  .scanline-overlay,
+  .ticker-track,
+  .line-neon,
+  .status-dot,
+  .term-cursor{
+    animation:none!important;
+  }
+}
+
+@media(max-width:1100px){
+  .hero{
+    grid-template-columns:1fr;
+  }
+
+  .hero-right{
+    display:none;
+  }
+}
+
+@media(max-width:760px){
+
+  nav{
+    flex-direction:column;
+    gap:12px;
+    padding:12px 20px;
+  }
+
+  .nav-logo::after{
+    display:none;
+  }
+
+  .nav-links{
+    width:100%;
+    justify-content:space-between;
+    gap:10px;
+
+    overflow-x:auto;
+  }
+
+  .hero-left{
+    padding:140px 20px 60px;
+  }
+
+  .hero-title{
+    font-size:clamp(3.5rem,12vw,5rem);
+  }
+
+  .cta-section{
+    padding:80px 20px;
+  }
+
+  .cta-form{
+    flex-direction:column;
+  }
+
+  .cta-input{
+    border-right:1px solid var(--border);
+    border-bottom:none;
+  }
+
+  .btn-primary{
+    width:100%;
+  }
+
+  footer{
+    flex-direction:column;
+    text-align:center;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div id="cursor"></div>
+<div id="cursor-dot"></div>
+
+<canvas id="hex-canvas" aria-hidden="true"></canvas>
+<canvas id="matrix-canvas" aria-hidden="true"></canvas>
+<canvas id="radar-canvas" aria-hidden="true"></canvas>
+
+<div class="scanline-overlay" aria-hidden="true"></div>
+<div class="vignette" aria-hidden="true"></div>
+
+<div class="site">
+
+<nav aria-label="Main navigation">
+
+<a href="#" class="nav-logo" aria-label="SERAPH Home">
+SERAPH
+</a>
+
+<ul class="nav-links">
+<li><a href="#access">Access</a></li>
+<li><a href="#protocols">Protocols</a></li>
+<li><a href="#features">Capabilities</a></li>
+</ul>
+
+<div class="nav-status" aria-live="polite">
+<div class="status-dot"></div>
+<span id="nav-clock">SYS // ONLINE</span>
+</div>
+
+</nav>
+
+<section class="hero">
+
+<div class="hero-left">
+
+<div class="hero-eyebrow">
+Classified cognitive layer // active
+</div>
+
+<h1 class="hero-title">
+Sovereign
+<span class="line-accent">Cyber</span>
+<span class="line-neon">Defence</span>
+</h1>
+
+<p class="hero-sub">
+SERAPH deploys <strong>autonomous threat cognition</strong>
+across your attack surface with adaptive zero-trust architecture.
+</p>
+
+<div class="hero-cta">
+<a href="#access" class="btn-primary">Request clearance</a>
+<a href="#protocols" class="btn-ghost">View protocols</a>
+</div>
+
+</div>
+
+<div class="hero-right" aria-hidden="true">
+
+<div class="threat-orb-wrap">
+<canvas id="three-canvas"></canvas>
+</div>
+
+<div class="glass-card">
+<div class="glass-card-title">// Live telemetry feed</div>
+<div class="terminal-card" id="terminal"></div>
+</div>
+
+<div class="glass-card">
+<div class="glass-card-title">// Threat matrix</div>
+<div class="alert-list" id="alertList"></div>
+</div>
+
+</div>
+
+</section>
+
+<section class="cta-section" id="access">
+
+<h2 class="cta-title">
+<span class="outline">Request</span><br>
+Access
+</h2>
+
+<p class="cta-sub">
+SERAPH access is restricted to verified defence and infrastructure operators.
+</p>
+
+<form class="cta-form" id="accessForm" aria-label="Access request form">
+
+<input
+type="email"
+class="cta-input"
+placeholder="// secure.contact@agency.mil"
+autocomplete="email"
+inputmode="email"
+maxlength="254"
+required
+>
+
+<button type="submit" class="btn-primary">
+Request clearance
+</button>
+
+</form>
+
+</section>
+
+<footer>
+
+<div class="footer-logo">
+SERAPH
+</div>
+
+<ul class="footer-links">
+<li><a href="#">Documentation</a></li>
+<li><a href="#">Compliance</a></li>
+<li><a href="#">Security</a></li>
+</ul>
+
+<div class="footer-copy">
+© 2026 SERAPH Systems
+</div>
+
+</footer>
+
+</div>
+
+<script>
+'use strict';
+
+// ─────────────────────────────────────────────
+// Visibility State
+// ─────────────────────────────────────────────
+
+let isTabActive = true;
+
+document.addEventListener('visibilitychange', () => {
+  isTabActive = !document.hidden;
+});
+
+// ─────────────────────────────────────────────
+// Cursor
+// ─────────────────────────────────────────────
+
+const cursor = document.getElementById('cursor');
+const cursorDot = document.getElementById('cursor-dot');
+
+if (window.matchMedia('(pointer:fine)').matches) {
+
+  let mx = 0;
+  let my = 0;
+
+  document.addEventListener('mousemove', (e) => {
+    mx = e.clientX;
+    my = e.clientY;
+  }, { passive:true });
+
+  (function animateCursor(){
+
+    if (isTabActive) {
+      cursor.style.left = mx + 'px';
+      cursor.style.top = my + 'px';
+
+      cursorDot.style.left = mx + 'px';
+      cursorDot.style.top = my + 'px';
+    }
+
+    requestAnimationFrame(animateCursor);
+
+  })();
+}
+
+// ─────────────────────────────────────────────
+// Clock
+// ─────────────────────────────────────────────
+
+const navClock = document.getElementById('nav-clock');
+
+function tickClock(){
+
+  if (!isTabActive) return;
+
+  const d = new Date();
+
+  const p = (n) => String(n).padStart(2,'0');
+
+  navClock.textContent =
+    `UTC // ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}:${p(d.getUTCSeconds())} // ONLINE`;
+}
+
+tickClock();
+
+setInterval(tickClock, 1000);
+
+// ─────────────────────────────────────────────
+// Form
+// ─────────────────────────────────────────────
+
+document.getElementById('accessForm')?.addEventListener('submit', (e) => {
+
+  e.preventDefault();
+
+  const email =
+    e.currentTarget
+    .querySelector('input[type="email"]')
+    ?.value
+    .trim();
+
+  if (!email) return;
+
+  alert('Clearance request received.');
+
+});
+
+// ─────────────────────────────────────────────
+// Terminal
+// ─────────────────────────────────────────────
+
+const terminal = document.getElementById('terminal');
+
+const lines = [
+  { c:'term-line', t:'[SYS] Relay chain established…' },
+  { c:'term-line active', t:'[AUTH] Zero-trust verification ✓' },
+  { c:'term-line warn', t:'[SCAN] Anomaly detected' },
+  { c:'term-line active', t:'[RESP] Quarantine deployed 14ms' },
+  { c:'term-line err', t:'[WARN] Exfil attempt suppressed' }
+];
+
+let lineIndex = 0;
+
+function pushLine(){
+
+  if (!isTabActive) return;
+
+  const item = lines[lineIndex];
+
+  const div = document.createElement('div');
+  div.className = item.c;
+  div.textContent = item.t;
+
+  const cursorEl = document.createElement('span');
+  cursorEl.className = 'term-cursor';
+
+  div.appendChild(cursorEl);
+
+  terminal.appendChild(div);
+
+  while (terminal.children.length > 5) {
+    terminal.removeChild(terminal.firstChild);
+  }
+
+  lineIndex = (lineIndex + 1) % lines.length;
+}
+
+pushLine();
+
+setInterval(pushLine, 1200);
+
+// ─────────────────────────────────────────────
+// Alerts
+// ─────────────────────────────────────────────
+
+const alertList = document.getElementById('alertList');
+
+const alerts = [
+  { cls:'ok', txt:'AES-256 relay sealed', src:'CRYP' },
+  { cls:'warn', txt:'Suspicious beacon detected', src:'SIGINT' },
+  { cls:'crit', txt:'Credential spray blocked', src:'NET' },
+  { cls:'ok', txt:'Entropy field stabilised', src:'CORE' }
+];
+
+function pushAlert(){
+
+  if (!isTabActive) return;
+
+  const a = alerts[Math.floor(Math.random() * alerts.length)];
+
+  const now = new Date();
+
+  const p = (n) => String(n).padStart(2,'0');
+
+  const time =
+    `${p(now.getUTCHours())}:${p(now.getUTCMinutes())}:${p(now.getUTCSeconds())}`;
+
+  const el = document.createElement('div');
+  el.className = `alert-item ${a.cls}`;
+
+  const dot = document.createElement('div');
+  dot.className = 'alert-dot';
+
+  const text = document.createElement('span');
+  text.className = 'alert-text';
+  text.textContent = `[${a.src}] ${a.txt}`;
+
+  const stamp = document.createElement('span');
+  stamp.className = 'alert-time';
+  stamp.textContent = time;
+
+  el.append(dot, text, stamp);
+
+  alertList.appendChild(el);
+
+  while (alertList.children.length > 3) {
+    alertList.removeChild(alertList.firstChild);
+  }
+}
+
+pushAlert();
+
+setInterval(pushAlert, 2200);
+
+// ─────────────────────────────────────────────
+// Three.js Orb
+// ─────────────────────────────────────────────
+
+(function(){
+
+  const canvas = document.getElementById('three-canvas');
+
+  if (!canvas || !window.THREE) return;
+
+  const scene = new THREE.Scene();
+
+  const camera =
+    new THREE.PerspectiveCamera(40, 1, .1, 100);
+
+  camera.position.set(0,0,6);
+
+  const renderer =
+    new THREE.WebGLRenderer({
+      canvas,
+      alpha:true,
+      antialias:true
+    });
+
+  renderer.setPixelRatio(
+    Math.min(window.devicePixelRatio, 2)
+  );
+
+  renderer.setSize(340,340);
+
+  scene.add(
+    new THREE.AmbientLight(0x99ffdd,1.2)
+  );
+
+  const light =
+    new THREE.DirectionalLight(0x00ff88,2);
+
+  light.position.set(3,4,5);
+
+  scene.add(light);
+
+  const group = new THREE.Group();
+
+  scene.add(group);
+
+  const geo =
+    new THREE.IcosahedronGeometry(1.3,2);
+
+  const mesh =
+    new THREE.Mesh(
+      geo,
+      new THREE.MeshStandardMaterial({
+        color:0x03150a,
+        emissive:0x00ff88,
+        emissiveIntensity:.7,
+        transparent:true,
+        opacity:.22
+      })
+    );
+
+  group.add(mesh);
+
+  const wire =
+    new THREE.Mesh(
+      geo,
+      new THREE.MeshBasicMaterial({
+        color:0x00ff88,
+        wireframe:true,
+        transparent:true,
+        opacity:.18
+      })
+    );
+
+  group.add(wire);
+
+  function animate(){
+
+    if (isTabActive) {
+
+      group.rotation.y += .003;
+      group.rotation.x += .001;
+
+      renderer.render(scene, camera);
+    }
+
+    requestAnimationFrame(animate);
+  }
+
+  animate();
+
+})();
+</script>
+
+</body>
+</html>
