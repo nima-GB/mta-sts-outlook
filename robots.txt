@@ -1,0 +1,21 @@
+# Unauthorized scraping is strictly prohibited.
+# This site is restricted to authorized agents only.
+
+User-agent: *
+Disallow: /
+
+# Directives for known aggressive bots
+User-agent: AhrefsBot
+Disallow: /
+
+User-agent: SemrushBot
+Disallow: /
+
+User-agent: DotBot
+Disallow: /
+
+User-agent: MJ12bot
+Disallow: /
+
+# Sitemap removed intentionally to prevent discovery
+# Crawl-delay: 10
