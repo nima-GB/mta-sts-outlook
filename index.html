@@ -4,13 +4,29 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <meta name="color-scheme" content="dark"/>
+<meta name="referrer" content="no-referrer"/>
+
+<meta http-equiv="Content-Security-Policy"
+content="
+default-src 'self';
+base-uri 'self';
+object-src 'none';
+form-action 'self';
+img-src 'self' data:;
+font-src https://fonts.gstatic.com;
+style-src 'self' https://fonts.googleapis.com 'unsafe-inline';
+script-src 'self' https://cdn.jsdelivr.net 'unsafe-inline';
+connect-src 'self';
+">
+
 <title>SERAPH // Sovereign Cyber Intelligence</title>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
 <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@300;400;500;600;700&family=Bebas+Neue&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap" rel="stylesheet">
 
-<script src="https://cdn.jsdelivr.net/npm/three@0.184.0/build/three.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/three@0.184.0/build/three.min.js"></script>
 
 <style>
 :root{
@@ -38,16 +54,20 @@
   --font-tech:"Share Tech Mono",monospace;
   --font-display:"Bebas Neue",sans-serif;
   --font-body:"Rajdhani",sans-serif;
-  --r:2px;
-  --r2:6px;
 }
 
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+*,*::before,*::after{
+  box-sizing:border-box;
+  margin:0;
+  padding:0;
+}
 
-html{scroll-behavior:smooth}
+html{
+  scroll-behavior:smooth;
+}
 
 body{
-  background:var(--bg);
+  background:#000;
   color:var(--white);
   font-family:var(--font-body);
   overflow-x:hidden;
@@ -55,165 +75,246 @@ body{
   cursor:none;
 }
 
-canvas {
-  max-width: 100vw;
-  max-height: 100vh;
-  display: block;
+canvas{
+  display:block;
+  max-width:100%;
 }
 
-/* CUSTOM CURSOR */
-#cursor{
-  position:fixed;
-  width:18px;height:18px;
-  border:1.5px solid var(--neon);
-  border-radius:50%;
-  pointer-events:none;
-  z-index:9999;
-  transform:translate(-50%,-50%);
-  transition:width .18s,height .18s,background .18s,border-color .18s;
-  mix-blend-mode:screen;
-  will-change: transform, width, height;
-  backface-visibility: hidden;
+a,button,input{
+  -webkit-tap-highlight-color:transparent;
 }
+
+#cursor,
 #cursor-dot{
   position:fixed;
-  width:4px;height:4px;
-  background:var(--neon);
-  border-radius:50%;
   pointer-events:none;
   z-index:9999;
   transform:translate(-50%,-50%);
-  box-shadow:0 0 8px var(--neon);
-  will-change: transform, width, height;
-  backface-visibility: hidden;
 }
+
+#cursor{
+  width:18px;
+  height:18px;
+  border:1.5px solid var(--neon);
+  border-radius:50%;
+  mix-blend-mode:screen;
+  transition:
+    width .18s,
+    height .18s,
+    background .18s,
+    border-color .18s;
+}
+
+#cursor-dot{
+  width:4px;
+  height:4px;
+  background:var(--neon);
+  border-radius:50%;
+  box-shadow:0 0 8px var(--neon);
+}
+
 body:has(a:hover) #cursor,
 body:has(button:hover) #cursor{
-  width:36px;height:36px;
+  width:36px;
+  height:36px;
   background:rgba(0,255,136,.06);
   border-color:var(--cyan);
 }
 
-/* BACKGROUND LAYERS */
-#hex-canvas,#matrix-canvas,#radar-canvas{
-  position:fixed;inset:0;
-  pointer-events:none;
-  z-index:0;
+@media (pointer: coarse), (hover: none){
+  body{
+    cursor:auto;
+  }
+
+  #cursor,
+  #cursor-dot{
+    display:none;
+  }
 }
-#hex-canvas{opacity:.18}
-#matrix-canvas{opacity:.06;z-index:1}
+
+#hex-canvas,
+#matrix-canvas,
+#radar-canvas{
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+}
+
+#hex-canvas{z-index:0;opacity:.18}
+#matrix-canvas{z-index:1;opacity:.06}
 #radar-canvas{z-index:2;opacity:.22}
 
 .scanline-overlay{
-  position:fixed;inset:0;
+  position:fixed;
+  inset:0;
+  z-index:3;
+  pointer-events:none;
+
   background:repeating-linear-gradient(
     0deg,
-    transparent,transparent 2px,
-    rgba(0,255,136,.015) 2px,rgba(0,255,136,.015) 4px
+    transparent,
+    transparent 2px,
+    rgba(0,255,136,.015) 2px,
+    rgba(0,255,136,.015) 4px
   );
-  pointer-events:none;z-index:3;
+
   animation:scanRoll 8s linear infinite;
 }
+
 @keyframes scanRoll{
   from{background-position:0 0}
   to{background-position:0 200px}
 }
 
 .vignette{
-  position:fixed;inset:0;
-  background:radial-gradient(ellipse at 50% 50%,transparent 42%,rgba(0,0,0,.84) 100%);
-  pointer-events:none;z-index:4;
+  position:fixed;
+  inset:0;
+  z-index:4;
+  pointer-events:none;
+  background:
+    radial-gradient(
+      ellipse at center,
+      transparent 42%,
+      rgba(0,0,0,.84) 100%
+    );
 }
 
-/* MAIN LAYOUT */
 .site{
-  position:relative;z-index:5;
-  display:flex;flex-direction:column;
-  min-height:100vh;
+  position:relative;
+  z-index:5;
 }
 
-/* ─── NAV ─── */
 nav{
-  position:fixed;top:0;left:0;right:0;
+  position:fixed;
+  top:0;
+  left:0;
+  right:0;
   z-index:200;
-  display:flex;align-items:center;justify-content:space-between;
+
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+
   padding:18px 48px;
-  background:linear-gradient(180deg,rgba(0,5,3,.92) 0%,transparent 100%);
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(0,5,3,.92),
+      transparent
+    );
+
   border-bottom:1px solid rgba(0,255,136,.06);
+
   backdrop-filter:blur(6px);
 }
 
 .nav-logo{
+  position:relative;
+
+  text-decoration:none;
+  color:var(--neon);
+
   font-family:var(--font-display);
   font-size:2rem;
   letter-spacing:.28em;
-  color:var(--neon);
-  text-shadow:0 0 24px var(--neon-glow),0 0 60px rgba(0,255,136,.12);
-  text-decoration:none;
-  position:relative;
+
+  text-shadow:
+    0 0 24px var(--neon-glow),
+    0 0 60px rgba(0,255,136,.12);
 }
+
 .nav-logo::after{
-  content:"v4.1.0";
+  content:"v4.1.1";
   position:absolute;
-  right:-44px;top:4px;
+  right:-44px;
+  top:4px;
+
   font-family:var(--font-mono);
   font-size:.48rem;
   color:var(--muted);
-  letter-spacing:.12em;
 }
 
 .nav-links{
-  display:flex;align-items:center;gap:36px;
+  display:flex;
+  gap:36px;
   list-style:none;
 }
+
 .nav-links a{
+  position:relative;
+
+  color:var(--muted);
+  text-decoration:none;
+
   font-family:var(--font-tech);
   font-size:.78rem;
   letter-spacing:.24em;
   text-transform:uppercase;
-  color:var(--muted);
-  text-decoration:none;
-  transition:color .2s,text-shadow .2s;
-  position:relative;
+
+  transition:color .2s;
 }
+
 .nav-links a::before{
   content:"";
   position:absolute;
-  bottom:-4px;left:0;right:0;
+  bottom:-4px;
+  left:0;
+  right:0;
+
   height:1px;
   background:var(--neon);
+
   transform:scaleX(0);
   transform-origin:left;
   transition:transform .24s;
 }
-.nav-links a:hover{color:var(--neon);text-shadow:0 0 16px var(--neon-glow)}
-.nav-links a:hover::before{transform:scaleX(1)}
+
+.nav-links a:hover{
+  color:var(--neon);
+}
+
+.nav-links a:hover::before{
+  transform:scaleX(1);
+}
 
 .nav-status{
-  display:flex;align-items:center;gap:12px;
+  display:flex;
+  align-items:center;
+  gap:12px;
+
   font-family:var(--font-tech);
   font-size:.72rem;
   letter-spacing:.18em;
   color:var(--muted);
 }
+
 .status-dot{
-  width:8px;height:8px;
+  width:8px;
+  height:8px;
   border-radius:50%;
   background:var(--neon);
+
   box-shadow:0 0 10px var(--neon);
+
   animation:dotPulse 2.4s ease-in-out infinite;
 }
+
 @keyframes dotPulse{
-  0%,100%{opacity:1;box-shadow:0 0 10px var(--neon)}
-  50%{opacity:.4;box-shadow:0 0 4px var(--neon)}
+  0%,100%{
+    opacity:1;
+  }
+  50%{
+    opacity:.4;
+  }
 }
 
-/* ─── HERO ─── */
 .hero{
   min-height:100vh;
+
   display:grid;
   grid-template-columns:1fr 1fr;
-  position:relative;
+
   overflow:hidden;
 }
 
@@ -221,29 +322,31 @@ nav{
   display:flex;
   flex-direction:column;
   justify-content:center;
+
   padding:140px 48px 80px 64px;
-  position:relative;
-  z-index:10;
 }
 
 .hero-eyebrow{
-  display:inline-flex;align-items:center;gap:14px;
+  display:inline-flex;
+  align-items:center;
+  gap:14px;
+
   margin-bottom:28px;
+
   font-family:var(--font-tech);
   font-size:.72rem;
   letter-spacing:.38em;
   text-transform:uppercase;
+
   color:var(--neon);
 }
-.hero-eyebrow::before{
-  content:"";
-  width:40px;height:1px;
-  background:linear-gradient(90deg,transparent,var(--neon));
-}
+
+.hero-eyebrow::before,
 .hero-eyebrow::after{
   content:"";
-  width:40px;height:1px;
-  background:linear-gradient(270deg,transparent,var(--neon));
+  width:40px;
+  height:1px;
+  background:var(--neon);
 }
 
 .hero-title{
@@ -252,109 +355,122 @@ nav{
   line-height:.88;
   letter-spacing:.06em;
   text-transform:uppercase;
-  color:var(--white);
-  margin-bottom:8px;
 }
-.hero-title .line-accent{
+
+.line-accent{
   display:block;
   color:transparent;
   -webkit-text-stroke:1px rgba(0,255,136,.5);
-  position:relative;
 }
-.hero-title .line-neon{
+
+.line-neon{
   display:block;
   color:var(--neon);
-  text-shadow:0 0 40px rgba(0,255,136,.4),0 0 80px rgba(0,255,136,.15);
-  position:relative;
+
+  text-shadow:
+    0 0 40px rgba(0,255,136,.4),
+    0 0 80px rgba(0,255,136,.15);
+
+  animation:glitch 10s ease-in-out infinite;
+}
+
+@keyframes glitch{
+  0%,90%,100%{
+    text-shadow:
+      0 0 40px rgba(0,255,136,.4),
+      0 0 80px rgba(0,255,136,.15);
+  }
+
+  92%{
+    text-shadow:
+      -2px 0 var(--red),
+      2px 0 var(--cyan);
+  }
+
+  94%{
+    text-shadow:
+      2px 0 var(--red),
+      -2px 0 var(--cyan);
+  }
 }
 
 .hero-sub{
-  font-family:var(--font-body);
-  font-size:1.1rem;
-  font-weight:300;
-  line-height:1.85;
-  color:rgba(232,255,244,.55);
   max-width:60ch;
   margin:28px 0 44px;
-  letter-spacing:.04em;
+
+  color:rgba(232,255,244,.55);
+
+  font-size:1.1rem;
+  line-height:1.85;
 }
+
 .hero-sub strong{
   color:var(--neon);
-  font-weight:600;
 }
 
 .hero-cta{
-  display:flex;gap:16px;align-items:center;flex-wrap:wrap;
+  display:flex;
+  gap:16px;
+  flex-wrap:wrap;
+}
+
+.btn-primary,
+.btn-ghost{
+  display:inline-block;
+
+  padding:16px 32px;
+
+  text-decoration:none;
+  text-transform:uppercase;
+
+  font-family:var(--font-tech);
+  font-size:.78rem;
+  letter-spacing:.3em;
+
+  clip-path:
+    polygon(
+      0 0,
+      calc(100% - 10px) 0,
+      100% 10px,
+      100% 100%,
+      10px 100%,
+      0 calc(100% - 10px)
+    );
 }
 
 .btn-primary{
-  font-family:var(--font-tech);
-  font-size:.78rem;
-  letter-spacing:.3em;
-  text-transform:uppercase;
-  color:#000;
-  background:var(--neon);
   border:none;
-  padding:16px 32px;
-  cursor:none;
-  position:relative;
-  overflow:hidden;
-  clip-path:polygon(0 0,calc(100% - 10px) 0,100% 10px,100% 100%,10px 100%,0 calc(100% - 10px));
-  transition:filter .2s,box-shadow .2s;
-  text-decoration:none;
-  display:inline-block;
+  background:var(--neon);
+  color:#000;
 }
-.btn-primary::before{
-  content:"";
-  position:absolute;inset:0;
-  background:linear-gradient(90deg,transparent,rgba(255,255,255,.22),transparent);
-  transform:translateX(-100%);
-  transition:transform .42s;
-}
+
 .btn-primary:hover{
   filter:brightness(1.12);
-  box-shadow:0 0 36px rgba(0,255,136,.42);
 }
-.btn-primary:hover::before{transform:translateX(100%)}
 
 .btn-ghost{
-  font-family:var(--font-tech);
-  font-size:.78rem;
-  letter-spacing:.3em;
-  text-transform:uppercase;
+  border:1px solid rgba(0,255,136,.24);
   color:var(--neon);
   background:transparent;
-  border:1px solid rgba(0,255,136,.24);
-  padding:15px 32px;
-  cursor:none;
-  clip-path:polygon(0 0,calc(100% - 10px) 0,100% 10px,100% 100%,10px 100%,0 calc(100% - 10px));
-  transition:background .2s,border-color .2s,box-shadow .2s;
-  text-decoration:none;
-  display:inline-block;
-}
-.btn-ghost:hover{
-  background:rgba(0,255,136,.06);
-  border-color:rgba(0,255,136,.48);
-  box-shadow:0 0 24px rgba(0,255,136,.14);
 }
 
 .hero-metrics{
-  display:flex;gap:36px;
+  display:flex;
+  gap:36px;
+  flex-wrap:wrap;
+
   margin-top:56px;
   padding-top:36px;
+
   border-top:1px solid var(--border);
 }
-.metric{
-  display:flex;flex-direction:column;gap:6px;
-}
+
 .metric-val{
   font-family:var(--font-display);
   font-size:2.4rem;
-  letter-spacing:.08em;
   color:var(--neon);
-  text-shadow:0 0 20px rgba(0,255,136,.35);
-  line-height:1;
 }
+
 .metric-label{
   font-family:var(--font-tech);
   font-size:.64rem;
@@ -363,838 +479,349 @@ nav{
   color:var(--muted);
 }
 
-/* HERO RIGHT — GLASSMORPH PANEL + 3D */
 .hero-right{
-  position:relative;
-  z-index:10;
   display:flex;
   flex-direction:column;
   align-items:center;
   justify-content:center;
-  padding:120px 48px 80px 0;
+
   gap:18px;
+
+  padding:120px 48px 80px 0;
 }
 
 .threat-orb-wrap{
   position:relative;
-  width:340px;height:340px;
-  flex-shrink:0;
+  width:340px;
+  height:340px;
 }
 
 #three-canvas{
-  position:absolute;inset:0;
-  width:100%!important;height:100%!important;
-}
-
-.orb-rings{
-  position:absolute;inset:0;
-  pointer-events:none;
-}
-.orb-ring{
   position:absolute;
-  border-radius:50%;
-  border:1px solid;
-  top:50%;left:50%;
-  transform:translate(-50%,-50%);
-  animation:ringPulse 3.6s ease-in-out infinite;
-}
-.orb-ring:nth-child(1){
-  width:360px;height:360px;
-  border-color:rgba(0,255,136,.12);
-  animation-delay:0s;
-}
-.orb-ring:nth-child(2){
-  width:420px;height:420px;
-  border-color:rgba(23,243,232,.07);
-  animation-delay:.8s;
-}
-.orb-ring:nth-child(3){
-  width:490px;height:490px;
-  border-color:rgba(0,255,136,.04);
-  animation-delay:1.6s;
-}
-@keyframes ringPulse{
-  0%,100%{opacity:.6;transform:translate(-50%,-50%) scale(1)}
-  50%{opacity:.15;transform:translate(-50%,-50%) scale(1.05)}
+  inset:0;
+  width:100% !important;
+  height:100% !important;
 }
 
-.threat-label{
-  font-family:var(--font-tech);
-  font-size:.66rem;
-  letter-spacing:.28em;
-  text-transform:uppercase;
-  color:var(--muted);
-  text-align:center;
-}
-
-/* GLASS CARDS */
 .glass-card{
-  background:var(--glass);
-  border:1px solid var(--border);
-  backdrop-filter:blur(12px);
-  -webkit-backdrop-filter:blur(12px);
-  padding:20px 24px;
-  position:relative;
-  overflow:hidden;
   width:100%;
   max-width:360px;
+
+  padding:20px 24px;
+
+  background:var(--glass);
+
+  border:1px solid var(--border);
+
+  backdrop-filter:blur(12px);
 }
-.glass-card::before{
-  content:"";
-  position:absolute;
-  top:0;left:0;right:0;
-  height:1px;
-  background:linear-gradient(90deg,transparent,var(--neon),transparent);
-  opacity:.35;
-}
+
 .glass-card-title{
+  margin-bottom:14px;
+
+  color:var(--muted);
+
   font-family:var(--font-tech);
   font-size:.68rem;
   letter-spacing:.3em;
   text-transform:uppercase;
-  color:var(--muted);
-  margin-bottom:14px;
 }
 
-/* TERMINAL CARD */
 .terminal-card{
+  max-height:110px;
+  overflow:hidden;
+
   font-family:var(--font-mono);
   font-size:.78rem;
   line-height:1.7;
   color:#5aff9e;
-  max-height:110px;
-  overflow:hidden;
 }
-.term-line{color:#2a6a48}
-.term-line.active{color:#5aff9e}
-.term-line.warn{color:var(--amber)}
-.term-line.err{color:var(--red)}
+
+.term-line{
+  color:#2a6a48;
+}
+
+.term-line.active{
+  color:#5aff9e;
+}
+
+.term-line.warn{
+  color:var(--amber);
+}
+
+.term-line.err{
+  color:var(--red);
+}
+
 .term-cursor{
   display:inline-block;
-  width:7px;height:13px;
+  width:7px;
+  height:13px;
+
+  margin-left:4px;
+
   background:#5aff9e;
-  vertical-align:middle;
+
   animation:termBlink .9s steps(1) infinite;
 }
-@keyframes termBlink{50%{opacity:0}}
 
-/* LIVE ALERTS */
-.alert-list{display:grid;gap:8px}
+@keyframes termBlink{
+  50%{
+    opacity:0;
+  }
+}
+
+.alert-list{
+  display:grid;
+  gap:8px;
+}
+
 .alert-item{
-  display:flex;align-items:center;gap:12px;
+  display:flex;
+  align-items:center;
+  gap:12px;
+
   padding:10px 12px;
+
   background:rgba(0,0,0,.3);
+
   border:1px solid rgba(255,255,255,.04);
   border-left:2px solid;
+
   font-family:var(--font-tech);
   font-size:.72rem;
   letter-spacing:.12em;
 }
-.alert-item.ok{border-left-color:var(--neon)}
-.alert-item.warn{border-left-color:var(--amber)}
-.alert-item.crit{border-left-color:var(--red)}
-.alert-dot{
-  width:6px;height:6px;border-radius:50%;
-  flex-shrink:0;
+
+.alert-item.ok{
+  border-left-color:var(--neon);
 }
-.alert-item.ok .alert-dot{background:var(--neon);box-shadow:0 0 8px var(--neon)}
-.alert-item.warn .alert-dot{background:var(--amber);box-shadow:0 0 8px var(--amber)}
+
+.alert-item.warn{
+  border-left-color:var(--amber);
+}
+
+.alert-item.crit{
+  border-left-color:var(--red);
+}
+
+.alert-dot{
+  width:6px;
+  height:6px;
+  border-radius:50%;
+}
+
+.alert-item.ok .alert-dot{
+  background:var(--neon);
+}
+
+.alert-item.warn .alert-dot{
+  background:var(--amber);
+}
+
 .alert-item.crit .alert-dot{
   background:var(--red);
-  box-shadow:0 0 8px var(--red);
-  animation:critPulse 1s ease-in-out infinite;
-}
-@keyframes critPulse{50%{opacity:.3}}
-.alert-text{flex:1;color:var(--white)}
-.alert-time{color:var(--muted);flex-shrink:0}
-
-/* ─── DIAGONAL DIVIDER ─── */
-.divider-diag{
-  width:100%;
-  height:80px;
-  background:linear-gradient(170deg,transparent 49.8%,rgba(0,255,136,.03) 50%);
-  position:relative;
-  z-index:5;
-}
-.divider-line{
-  height:1px;
-  background:linear-gradient(90deg,transparent,var(--neon-glow),transparent);
-  margin:0 auto;
-  width:80%;
 }
 
-/* ─── FEATURES SECTION ─── */
-.features{
-  position:relative;z-index:5;
-  padding:80px 64px 100px;
-}
-
-.section-header{
-  text-align:center;
-  margin-bottom:72px;
-}
-.section-eyebrow{
-  font-family:var(--font-tech);
-  font-size:.72rem;
-  letter-spacing:.42em;
-  text-transform:uppercase;
-  color:var(--neon);
-  margin-bottom:16px;
-}
-.section-title{
-  font-family:var(--font-display);
-  font-size:clamp(3rem,6vw,6.5rem);
-  letter-spacing:.1em;
-  color:var(--white);
-  line-height:.9;
-}
-.section-title span{
-  color:transparent;
-  -webkit-text-stroke:1px rgba(0,255,136,.4);
-}
-.section-sub{
-  margin-top:18px;
-  font-size:1rem;
-  font-weight:300;
-  color:rgba(232,255,244,.45);
-  letter-spacing:.06em;
-  max-width:60ch;
-  margin-left:auto;margin-right:auto;
-  line-height:1.8;
-}
-
-.features-grid{
-  display:grid;
-  grid-template-columns:repeat(3,1fr);
-  gap:2px;
-}
-
-.feature-card{
-  background:var(--glass);
-  border:1px solid var(--border);
-  padding:40px 36px;
-  position:relative;
-  overflow:hidden;
-  transition:background .24s,border-color .24s;
-  cursor:none;
-}
-.feature-card::after{
-  content:"";
-  position:absolute;
-  inset:0;
-  background:linear-gradient(135deg,rgba(0,255,136,.06),transparent 48%);
-  opacity:0;
-  transition:opacity .28s;
-}
-.feature-card:hover{
-  background:rgba(0,30,18,.82);
-  border-color:var(--border-bright);
-}
-.feature-card:hover::after{opacity:1}
-
-.feature-num{
-  font-family:var(--font-display);
-  font-size:4rem;
-  letter-spacing:.1em;
-  color:rgba(0,255,136,.08);
-  line-height:1;
-  margin-bottom:20px;
-  position:relative;z-index:1;
-}
-.feature-icon{
-  width:44px;height:44px;
-  border:1px solid var(--border-bright);
-  display:flex;align-items:center;justify-content:center;
-  margin-bottom:20px;
-  position:relative;z-index:1;
-  clip-path:polygon(0 0,calc(100% - 8px) 0,100% 8px,100% 100%,8px 100%,0 calc(100% - 8px));
-  background:rgba(0,255,136,.05);
-}
-.feature-icon svg{width:22px;height:22px;stroke:var(--neon);fill:none;stroke-width:1.5}
-
-.feature-title{
-  font-family:var(--font-body);
-  font-size:1.25rem;
-  font-weight:600;
-  letter-spacing:.12em;
-  text-transform:uppercase;
-  color:var(--white);
-  margin-bottom:12px;
-  position:relative;z-index:1;
-}
-.feature-desc{
-  font-size:.95rem;
-  font-weight:300;
-  line-height:1.85;
-  color:rgba(232,255,244,.45);
-  letter-spacing:.04em;
-  position:relative;z-index:1;
-}
-.feature-tag{
-  display:inline-block;
-  margin-top:18px;
-  font-family:var(--font-tech);
-  font-size:.64rem;
-  letter-spacing:.28em;
-  text-transform:uppercase;
-  color:var(--neon);
-  padding:5px 10px;
-  border:1px solid rgba(0,255,136,.18);
-  position:relative;z-index:1;
-}
-
-/* ─── THREAT DASHBOARD SECTION ─── */
-.dashboard-section{
-  position:relative;z-index:5;
-  padding:80px 64px;
-  background:rgba(0,8,4,.6);
-  border-top:1px solid var(--border);
-  border-bottom:1px solid var(--border);
-}
-
-.dashboard-grid{
-  display:grid;
-  grid-template-columns:1.4fr 1fr;
-  gap:24px;
-  align-items:start;
-}
-
-/* MAP PANEL */
-.map-panel{
-  background:var(--glass2);
-  border:1px solid var(--border);
-  position:relative;
-  overflow:hidden;
-}
-.map-panel::before{
-  content:"";
-  position:absolute;
-  top:0;left:0;right:0;height:1px;
-  background:linear-gradient(90deg,transparent,var(--neon),transparent);
-  opacity:.2;
-}
-.panel-header{
-  padding:16px 22px;
-  border-bottom:1px solid var(--border);
-  display:flex;align-items:center;justify-content:space-between;
-}
-.panel-title{
-  font-family:var(--font-tech);
-  font-size:.72rem;
-  letter-spacing:.3em;
-  text-transform:uppercase;
-  color:var(--neon);
-}
-.panel-badge{
-  font-family:var(--font-mono);
-  font-size:.66rem;
-  letter-spacing:.18em;
-  color:var(--muted);
-  background:rgba(0,255,136,.05);
-  padding:4px 10px;
-  border:1px solid var(--border);
-}
-.panel-body{padding:22px}
-
-.world-map-wrap{
-  position:relative;
-  height:280px;
-  overflow:hidden;
-}
-#worldCanvas{
-  width:100%;height:100%;
-  display:block;
-}
-
-.map-overlay-info{
-  position:absolute;
-  bottom:14px;right:14px;
-  background:rgba(0,0,0,.7);
-  border:1px solid var(--border);
-  padding:10px 14px;
-  font-family:var(--font-tech);
-  font-size:.66rem;
-  letter-spacing:.2em;
-  color:var(--muted);
-}
-.map-overlay-info strong{color:var(--neon);display:block;font-size:.82rem;letter-spacing:.12em}
-
-/* STATS COLUMN */
-.stats-col{
-  display:flex;flex-direction:column;gap:16px;
-}
-
-.stat-block{
-  background:var(--glass2);
-  border:1px solid var(--border);
-  padding:22px;
-  position:relative;
-  overflow:hidden;
-}
-.stat-block::before{
-  content:"";
-  position:absolute;inset:0;
-  background:linear-gradient(135deg,rgba(0,255,136,.04),transparent 50%);
-}
-.stat-row{
-  display:flex;justify-content:space-between;align-items:center;
-  margin-bottom:10px;
-  position:relative;z-index:1;
-}
-.stat-name{
-  font-family:var(--font-tech);
-  font-size:.7rem;
-  letter-spacing:.24em;
-  text-transform:uppercase;
-  color:var(--muted);
-}
-.stat-value{
-  font-family:var(--font-mono);
-  font-size:.88rem;
-  color:var(--neon);
-}
-.stat-bar-track{
-  height:3px;
-  background:rgba(0,255,136,.08);
-  position:relative;z-index:1;
-  overflow:hidden;
-}
-.stat-bar-fill{
-  height:100%;
-  background:linear-gradient(90deg,var(--neon),var(--cyan));
-  box-shadow:0 0 8px var(--neon-glow);
-  transition:width 1.2s ease;
-}
-.stat-bar-fill.red{background:linear-gradient(90deg,var(--red),#ff8fa8)}
-.stat-bar-fill.amber{background:linear-gradient(90deg,var(--amber),#ffd080)}
-
-.big-stat{
-  background:var(--glass2);
-  border:1px solid var(--border);
-  padding:28px 22px;
-  text-align:center;
-  position:relative;
-  overflow:hidden;
-}
-.big-stat-val{
-  font-family:var(--font-display);
-  font-size:4.5rem;
-  color:var(--neon);
-  text-shadow:0 0 30px rgba(0,255,136,.4);
-  line-height:1;
-}
-.big-stat-label{
-  font-family:var(--font-tech);
-  font-size:.68rem;
-  letter-spacing:.36em;
-  text-transform:uppercase;
-  color:var(--muted);
-  margin-top:10px;
-}
-.big-stat-sub{
-  font-family:var(--font-mono);
-  font-size:.72rem;
-  color:var(--red);
-  margin-top:8px;
-}
-
-/* GRAPH BAR AREA */
-.mini-graph{
-  display:flex;align-items:flex-end;
-  gap:4px;
-  height:60px;
-  padding-top:8px;
-}
-.bar{
+.alert-text{
   flex:1;
-  background:rgba(0,255,136,.18);
-  border-top:1px solid rgba(0,255,136,.4);
-  transition:height .6s ease;
-}
-.bar:hover{background:rgba(0,255,136,.36)}
-
-/* ─── PROTOCOLS SECTION ─── */
-.protocols{
-  position:relative;z-index:5;
-  padding:100px 64px;
 }
 
-.protocols-inner{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:80px;
-  align-items:center;
-}
-
-/* FIX: Ensure Protocol Visual is stable */
-.proto-visual{
-  position:relative;
-  height:480px;
-}
-
-.proto-grid{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:12px;
-  position:absolute;inset:0;
-  align-content:start;
-}
-
-.proto-tile{
-  background:var(--glass);
-  border:1px solid var(--border);
-  padding:20px;
-  position:relative;
-  overflow:hidden;
-  transition:border-color .2s;
-}
-.proto-tile:hover{border-color:var(--border-bright)}
-.proto-tile::before{
-  content:"";
-  position:absolute;
-  top:0;left:0;right:0;height:2px;
-  background:var(--neon);
-  transform:scaleX(0);
-  transform-origin:left;
-  transition:transform .3s;
-}
-.proto-tile:hover::before{transform:scaleX(1)}
-.proto-tile-key{
-  font-family:var(--font-mono);
-  font-size:.64rem;
+.alert-time{
   color:var(--muted);
-  letter-spacing:.2em;
-  margin-bottom:8px;
-}
-.proto-tile-val{
-  font-family:var(--font-display);
-  font-size:1.8rem;
-  color:var(--neon);
-  letter-spacing:.08em;
-  line-height:1;
-}
-.proto-tile-sub{
-  font-family:var(--font-tech);
-  font-size:.62rem;
-  color:rgba(0,255,136,.4);
-  letter-spacing:.24em;
-  text-transform:uppercase;
-  margin-top:4px;
 }
 
-.proto-tile.large{
-  grid-column:span 2;
-}
-
-.proto-content{}
-.proto-content .section-eyebrow{text-align:left}
-.proto-content .section-title{text-align:left}
-
-.proto-list{
-  display:grid;gap:14px;
-  margin-top:40px;
-}
-.proto-item{
-  display:flex;align-items:flex-start;gap:16px;
-  padding:18px 20px;
-  border:1px solid var(--border);
-  background:var(--glass);
-  transition:border-color .2s,background .2s;
-  cursor:none;
-}
-.proto-item:hover{
-  border-color:var(--border-bright);
-  background:rgba(0,30,18,.7);
-}
-.proto-item-icon{
-  width:36px;height:36px;
-  border:1px solid rgba(0,255,136,.22);
-  display:flex;align-items:center;justify-content:center;
-  flex-shrink:0;
-  background:rgba(0,255,136,.04);
-}
-.proto-item-icon svg{width:16px;height:16px;stroke:var(--neon);fill:none;stroke-width:1.5}
-.proto-item-body{}
-.proto-item-title{
-  font-family:var(--font-body);
-  font-weight:600;
-  font-size:.98rem;
-  letter-spacing:.1em;
-  text-transform:uppercase;
-  color:var(--white);
-  margin-bottom:4px;
-}
-.proto-item-desc{
-  font-size:.88rem;
-  font-weight:300;
-  color:rgba(232,255,244,.42);
-  letter-spacing:.04em;
-  line-height:1.7;
-}
-.proto-status{
-  margin-left:auto;
-  flex-shrink:0;
-  font-family:var(--font-tech);
-  font-size:.62rem;
-  letter-spacing:.22em;
-  text-transform:uppercase;
-  padding:5px 10px;
-  border:1px solid;
-}
-.proto-status.active{
-  color:var(--neon);
-  border-color:rgba(0,255,136,.24);
-  background:rgba(0,255,136,.05);
-}
-.proto-status.standby{
-  color:var(--amber);
-  border-color:rgba(255,170,0,.24);
-  background:rgba(255,170,0,.04);
-}
-
-/* ─── CTA SECTION ─── */
 .cta-section{
-  position:relative;z-index:5;
-  padding:120px 64px;
+  padding:120px 20px;
   text-align:center;
-  overflow:hidden;
-}
-.cta-section::before{
-  content:"";
-  position:absolute;
-  left:50%;top:50%;
-  transform:translate(-50%,-50%);
-  width:700px;height:700px;
-  border-radius:50%;
-  background:radial-gradient(circle,rgba(0,255,136,.06) 0%,transparent 68%);
-  pointer-events:none;
-}
-.cta-section::after{
-  content:"";
-  position:absolute;inset:0;
-  border-top:1px solid var(--border);
-  border-bottom:1px solid var(--border);
-  pointer-events:none;
 }
 
 .cta-kicker{
+  margin-bottom:20px;
+
+  color:var(--neon);
+
   font-family:var(--font-tech);
   font-size:.72rem;
   letter-spacing:.42em;
   text-transform:uppercase;
-  color:var(--neon);
-  margin-bottom:20px;
-  position:relative;z-index:1;
 }
+
 .cta-title{
   font-family:var(--font-display);
   font-size:clamp(4rem,8vw,9rem);
-  letter-spacing:.08em;
-  color:var(--white);
   line-height:.9;
   text-transform:uppercase;
-  position:relative;z-index:1;
 }
+
 .cta-title .outline{
   color:transparent;
   -webkit-text-stroke:1px rgba(0,255,136,.35);
 }
+
 .cta-sub{
-  font-size:1rem;
-  font-weight:300;
-  color:rgba(232,255,244,.4);
   max-width:52ch;
   margin:24px auto 44px;
+
+  color:rgba(232,255,244,.4);
+
   line-height:1.9;
-  letter-spacing:.06em;
-  position:relative;z-index:1;
 }
 
 .cta-form{
   display:flex;
   justify-content:center;
-  gap:0;
-  position:relative;z-index:1;
+
   max-width:520px;
   margin:0 auto;
 }
+
 .cta-input{
   flex:1;
-  background:rgba(0,20,12,.8);
+
+  padding:16px 20px;
+
   border:1px solid var(--border);
   border-right:none;
+
+  background:rgba(0,20,12,.8);
+
   color:var(--white);
+
   font-family:var(--font-mono);
-  font-size:.82rem;
-  letter-spacing:.12em;
-  padding:16px 20px;
+}
+
+.cta-input:focus{
   outline:none;
-  transition:border-color .2s;
-}
-.cta-input::placeholder{color:var(--muted)}
-.cta-input:focus{border-color:var(--neon)}
-
-.cta-note{
-  font-family:var(--font-tech);
-  font-size:.66rem;
-  letter-spacing:.24em;
-  text-transform:uppercase;
-  color:var(--muted);
-  margin-top:18px;
-  position:relative;z-index:1;
+  border-color:var(--neon);
 }
 
-/* ─── FOOTER ─── */
 footer{
-  position:relative;z-index:5;
-  padding:40px 64px;
-  border-top:1px solid var(--border);
   display:flex;
   justify-content:space-between;
   align-items:center;
   gap:24px;
+
+  padding:40px 64px;
+
+  border-top:1px solid var(--border);
 }
+
 .footer-logo{
+  color:var(--neon);
+
   font-family:var(--font-display);
   font-size:1.6rem;
   letter-spacing:.32em;
-  color:var(--neon);
-  text-shadow:0 0 20px rgba(0,255,136,.28);
 }
+
 .footer-links{
-  display:flex;gap:28px;list-style:none;
+  display:flex;
+  gap:28px;
+  list-style:none;
 }
+
 .footer-links a{
+  color:var(--muted);
+  text-decoration:none;
+
   font-family:var(--font-tech);
   font-size:.68rem;
   letter-spacing:.24em;
   text-transform:uppercase;
-  color:var(--muted);
-  text-decoration:none;
-  transition:color .2s;
 }
-.footer-links a:hover{color:var(--neon)}
+
+.footer-links a:hover{
+  color:var(--neon);
+}
+
 .footer-copy{
+  color:var(--muted2);
+
   font-family:var(--font-tech);
   font-size:.66rem;
   letter-spacing:.2em;
-  color:var(--muted2);
   text-transform:uppercase;
 }
 
-/* ─── TICKER ─── */
-.ticker-wrap{
-  position:relative;z-index:6;
-  overflow:hidden;
-  border-top:1px solid rgba(0,255,136,.06);
-  border-bottom:1px solid rgba(0,255,136,.06);
-  background:rgba(0,0,0,.5);
-  padding:10px 0;
-}
-.ticker-track{
-  display:flex;gap:0;
-  animation:ticker 30s linear infinite;
-  white-space:nowrap;
-}
-.ticker-item{
-  display:inline-flex;align-items:center;gap:22px;
-  padding:0 40px;
-  font-family:var(--font-tech);
-  font-size:.72rem;
-  letter-spacing:.28em;
-  text-transform:uppercase;
-  color:var(--muted);
-  border-right:1px solid rgba(0,255,136,.08);
-}
-.ticker-item strong{color:var(--neon)}
-.ticker-item .dot{
-  width:5px;height:5px;border-radius:50%;
-  background:var(--neon);
-  opacity:.4;
-}
-@keyframes ticker{
-  from{transform:translateX(0)}
-  to{transform:translateX(-50%)}
-}
-
-/* GLITCH ANIMATION FOR TITLE (Optimized timing) */
-@keyframes glitch{
-  0%,90%,100%{text-shadow:0 0 40px rgba(0,255,136,.4),0 0 80px rgba(0,255,136,.15)}
-  92%{text-shadow:-2px 0 var(--red),2px 0 var(--cyan),0 0 40px rgba(0,255,136,.4)}
-  94%{text-shadow:2px 0 var(--red),-2px 0 var(--cyan),0 0 40px rgba(0,255,136,.4)}
-  96%{text-shadow:-1px 0 var(--cyan),1px 0 var(--red),0 0 40px rgba(0,255,136,.4)}
-  98%{text-shadow:0 0 40px rgba(0,255,136,.4),0 0 80px rgba(0,255,136,.15)}
-}
-.hero-title .line-neon{animation:glitch 10s ease-in-out infinite}
-
-/* REDUCED MOTION */
-@media(prefers-reduced-motion:reduce){
-  *,*::before,*::after{
-    animation:none!important;
-    transition:none!important;
-  }
-}
-
-/* ─── RESPONSIVE & MOBILE HARDENING PATCH ─── */
 @media(max-width:1100px){
-  .hero{grid-template-columns:1fr}
-  .hero-right{display:none} /* Hides 3D element to save mobile GPU */
-  .features-grid{grid-template-columns:1fr 1fr}
-  .dashboard-grid{grid-template-columns:1fr}
-  .protocols-inner{grid-template-columns:1fr;gap:48px}
-  
-  /* Prevents the protocol grid from collapsing and overlapping content */
-  .proto-visual{height:auto;position:relative}
-  .proto-grid{position:relative;inset:auto;grid-template-columns:1fr 1fr}
-  
-  nav{padding:16px 24px}
+
+  .hero{
+    grid-template-columns:1fr;
+  }
+
+  .hero-right{
+    display:none;
+  }
 }
 
 @media(max-width:760px){
-  /* Container Adjustments */
-  .features{padding:60px 20px}
-  .dashboard-section{padding:60px 20px}
-  .protocols{padding:60px 20px}
-  .cta-section{padding:80px 20px}
-  footer{padding:30px 20px;flex-direction:column;align-items:center;text-align:center;gap:18px}
-  
-  /* Hero Overlap Fix */
-  .hero-left{padding:140px 20px 60px}
-  .hero-title{font-size:clamp(3.5rem, 12vw, 5rem)} /* Prevents word-wrap breaking */
-  .features-grid{grid-template-columns:1fr}
-  .hero-metrics{gap:16px; flex-wrap: wrap;}
-  
-  /* Mobile Navigation Recovery */
-  nav { flex-direction: column; gap: 12px; padding: 12px 20px; }
-  .nav-logo::after { display: none; } /* Clean up logo clutter on mobile */
-  .nav-links { 
-    display: flex; 
-    width: 100%; 
-    justify-content: space-between; 
-    gap: 10px; 
-    overflow-x: auto; 
-    padding-bottom: 5px; 
-  }
-  .nav-links a { font-size: 0.65rem; }
-  .nav-status { align-self: flex-end; position: absolute; top: 18px; right: 20px; }
-  
-  /* CTA Form Fix */
-  .cta-form{flex-direction:column; width: 100%;}
-  .cta-input{border-right:1px solid var(--border);border-bottom:none; border-radius: 0;}
-  .btn-primary { width: 100%; text-align: center; }
 
-  /* Tile Fixes */
-  .proto-grid{grid-template-columns:1fr;} /* Stacks protocol tiles vertically */
-  .proto-tile.large{grid-column:span 1;}
+  nav{
+    flex-direction:column;
+    gap:12px;
+    padding:12px 20px;
+  }
+
+  .nav-links{
+    width:100%;
+    justify-content:space-between;
+    gap:10px;
+    overflow-x:auto;
+  }
+
+  .nav-logo::after{
+    display:none;
+  }
+
+  .hero-left{
+    padding:140px 20px 60px;
+  }
+
+  .hero-title{
+    font-size:clamp(3.5rem,12vw,5rem);
+  }
+
+  .cta-form{
+    flex-direction:column;
+  }
+
+  .cta-input{
+    border-right:1px solid var(--border);
+    border-bottom:none;
+  }
+
+  .btn-primary{
+    width:100%;
+  }
+
+  footer{
+    flex-direction:column;
+    text-align:center;
+    padding:30px 20px;
+  }
 }
 
-/* Prevent Mobile Browser Address Bar Resize Jank */
-@media (pointer: coarse) {
-  body { min-height: 100dvh; }
-  .hero { min-height: 100dvh; }
+@media(prefers-reduced-motion:reduce){
+
+  *,
+  *::before,
+  *::after{
+    animation:none !important;
+    transition:none !important;
+  }
+
+  .scanline-overlay,
+  .ticker-track,
+  .line-neon,
+  .status-dot,
+  .term-cursor{
+    animation:none !important;
+  }
 }
 </style>
 </head>
+
 <body>
 
 <div id="cursor"></div>
@@ -1203,819 +830,494 @@ footer{
 <canvas id="hex-canvas" aria-hidden="true"></canvas>
 <canvas id="matrix-canvas" aria-hidden="true"></canvas>
 <canvas id="radar-canvas" aria-hidden="true"></canvas>
+
 <div class="scanline-overlay" aria-hidden="true"></div>
 <div class="vignette" aria-hidden="true"></div>
 
 <div class="site">
 
-  <nav aria-label="Main navigation">
-    <a href="#" class="nav-logo" aria-label="SERAPH Home">SERAPH</a>
-    <ul class="nav-links" role="list">
-      <li><a href="#features">Capabilities</a></li>
-      <li><a href="#dashboard">Intelligence</a></li>
-      <li><a href="#protocols">Protocols</a></li>
-      <li><a href="#access">Access</a></li>
-    </ul>
-    <div class="nav-status" aria-live="polite">
-      <div class="status-dot" role="img" aria-label="System online"></div>
-      <span id="nav-clock">SYS // ONLINE</span>
-    </div>
-  </nav>
+<nav aria-label="Main navigation">
 
-  <section class="hero" aria-label="Hero">
+<a href="#" class="nav-logo" aria-label="SERAPH home">
+SERAPH
+</a>
 
-    <div class="hero-left">
-      <div class="hero-eyebrow" role="doc-subtitle">Classified cognitive layer // active</div>
+<ul class="nav-links">
+<li><a href="#features">Capabilities</a></li>
+<li><a href="#dashboard">Intelligence</a></li>
+<li><a href="#protocols">Protocols</a></li>
+<li><a href="#access">Access</a></li>
+</ul>
 
-      <h1 class="hero-title">
-        Sovereign
-        <span class="line-accent">Cyber</span>
-        <span class="line-neon">Defence</span>
-      </h1>
+<div class="nav-status" aria-live="polite">
+<div class="status-dot" aria-hidden="true"></div>
+<span id="nav-clock">SYS // ONLINE</span>
+</div>
 
-      <p class="hero-sub">
-        SERAPH deploys <strong>autonomous threat cognition</strong> across your entire attack surface — zero-trust mesh, real-time SIGINT, and adaptive countermeasures fused into a single sovereign intelligence layer.
-      </p>
+</nav>
 
-      <div class="hero-cta">
-        <a href="#access" class="btn-primary">Request clearance</a>
-        <a href="#dashboard" class="btn-ghost">Live threat map</a>
-      </div>
+<section class="hero">
 
-      <div class="hero-metrics" role="list" aria-label="Key metrics">
-        <div class="metric" role="listitem">
-          <div class="metric-val" id="m-threats">0</div>
-          <div class="metric-label">Threats neutralised</div>
-        </div>
-        <div class="metric" role="listitem">
-          <div class="metric-val">99.98%</div>
-          <div class="metric-label">Uptime SLA</div>
-        </div>
-        <div class="metric" role="listitem">
-          <div class="metric-val" id="m-ms">0ms</div>
-          <div class="metric-label">Avg response</div>
-        </div>
-      </div>
-    </div>
+<div class="hero-left">
 
-    <div class="hero-right" aria-hidden="true">
-      <div class="threat-orb-wrap">
-        <div class="orb-rings">
-          <div class="orb-ring"></div>
-          <div class="orb-ring"></div>
-          <div class="orb-ring"></div>
-        </div>
-        <canvas id="three-canvas"></canvas>
-      </div>
-      <div class="threat-label">Quantum mesh / adaptive geometry / threat lattice</div>
+<div class="hero-eyebrow">
+Classified cognitive layer // active
+</div>
 
-      <div class="glass-card">
-        <div class="glass-card-title">// Live telemetry feed</div>
-        <div class="terminal-card" id="terminal" aria-live="polite"></div>
-      </div>
+<h1 class="hero-title">
+Sovereign
+<span class="line-accent">Cyber</span>
+<span class="line-neon">Defence</span>
+</h1>
 
-      <div class="glass-card">
-        <div class="glass-card-title">// Threat matrix — live</div>
-        <div class="alert-list" id="alertList" aria-live="polite"></div>
-      </div>
-    </div>
-  </section>
+<p class="hero-sub">
+SERAPH deploys <strong>autonomous threat cognition</strong>
+across your attack surface with adaptive zero-trust orchestration.
+</p>
 
-  <div class="ticker-wrap" aria-hidden="true">
-    <div class="ticker-track">
-      <div class="ticker-item"><span class="dot"></span><strong>SERAPH</strong>Autonomous cognition online</div>
-      <div class="ticker-item"><span class="dot"></span>Entropy field <strong>STABILISED</strong></div>
-      <div class="ticker-item"><span class="dot"></span>Zero-trust perimeter <strong>SEALED</strong></div>
-      <div class="ticker-item"><span class="dot"></span>SIGINT relay <strong>PASSIVE</strong></div>
-      <div class="ticker-item"><span class="dot"></span>Neural mesh <strong>SYNCED</strong></div>
-      <div class="ticker-item"><span class="dot"></span>AES-256 <strong>LOCKED</strong></div>
-      <div class="ticker-item"><span class="dot"></span>Threat vectors <strong>SUPPRESSED</strong></div>
-      <div class="ticker-item"><span class="dot"></span>Quantum relay <strong>NOMINAL</strong></div>
-      <div class="ticker-item"><span class="dot"></span><strong>SERAPH</strong>Autonomous cognition online</div>
-      <div class="ticker-item"><span class="dot"></span>Entropy field <strong>STABILISED</strong></div>
-      <div class="ticker-item"><span class="dot"></span>Zero-trust perimeter <strong>SEALED</strong></div>
-      <div class="ticker-item"><span class="dot"></span>SIGINT relay <strong>PASSIVE</strong></div>
-      <div class="ticker-item"><span class="dot"></span>Neural mesh <strong>SYNCED</strong></div>
-      <div class="ticker-item"><span class="dot"></span>AES-256 <strong>LOCKED</strong></div>
-      <div class="ticker-item"><span class="dot"></span>Threat vectors <strong>SUPPRESSED</strong></div>
-      <div class="ticker-item"><span class="dot"></span>Quantum relay <strong>NOMINAL</strong></div>
-    </div>
-  </div>
+<div class="hero-cta">
+<a href="#access" class="btn-primary">
+Request clearance
+</a>
 
-  <section class="features" id="features" aria-label="Capabilities">
-    <div class="section-header">
-      <div class="section-eyebrow">Core capabilities</div>
-      <h2 class="section-title">Engineered for<br><span>adversarial</span> terrain</h2>
-      <p class="section-sub">Purpose-built for environments where conventional defence fails. Every subsystem is designed to operate under sustained, sophisticated attack.</p>
-    </div>
+<a href="#dashboard" class="btn-ghost">
+Live threat map
+</a>
+</div>
 
-    <div class="features-grid" role="list">
+<div class="hero-metrics">
 
-      <article class="feature-card" role="listitem">
-        <div class="feature-num">01</div>
-        <div class="feature-icon">
-          <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-        </div>
-        <h3 class="feature-title">Zero-Trust Mesh</h3>
-        <p class="feature-desc">Continuous verification across every node. No implicit trust, no persistent sessions. Every packet interrogated in microseconds.</p>
-        <span class="feature-tag">ENFORCED</span>
-      </article>
+<div class="metric">
+<div class="metric-val" id="m-threats">0</div>
+<div class="metric-label">Threats neutralised</div>
+</div>
 
-      <article class="feature-card" role="listitem">
-        <div class="feature-num">02</div>
-        <div class="feature-icon">
-          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
-        </div>
-        <h3 class="feature-title">AI Threat Cognition</h3>
-        <p class="feature-desc">Sovereign neural inference predicts attack vectors before they materialise. No cloud dependency. On-premise, air-gapped inference at the edge.</p>
-        <span class="feature-tag">PREDICTIVE</span>
-      </article>
+<div class="metric">
+<div class="metric-val">99.98%</div>
+<div class="metric-label">Uptime SLA</div>
+</div>
 
-      <article class="feature-card" role="listitem">
-        <div class="feature-num">03</div>
-        <div class="feature-icon">
-          <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-        </div>
-        <h3 class="feature-title">Quantum-Safe Crypto</h3>
-        <p class="feature-desc">Post-quantum key encapsulation with CRYSTALS-Kyber and Dilithium. Hardened against harvest-now-decrypt-later adversaries.</p>
-        <span class="feature-tag">FIPS 140-3</span>
-      </article>
+<div class="metric">
+<div class="metric-val" id="m-ms">0ms</div>
+<div class="metric-label">Avg response</div>
+</div>
 
-      <article class="feature-card" role="listitem">
-        <div class="feature-num">04</div>
-        <div class="feature-icon">
-          <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-        </div>
-        <h3 class="feature-title">Live SIGINT Fusion</h3>
-        <p class="feature-desc">Real-time signals intelligence correlated across dark-web feeds, honeypots, and sovereign threat databases into a unified operational picture.</p>
-        <span class="feature-tag">STREAMING</span>
-      </article>
+</div>
 
-      <article class="feature-card" role="listitem">
-        <div class="feature-num">05</div>
-        <div class="feature-icon">
-          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-        </div>
-        <h3 class="feature-title">Autonomous Response</h3>
-        <p class="feature-desc">Closed-loop containment executes in under 200ms. Isolate, quarantine, and counter without human latency in the kill chain.</p>
-        <span class="feature-tag">200ms SLA</span>
-      </article>
+</div>
 
-      <article class="feature-card" role="listitem">
-        <div class="feature-num">06</div>
-        <div class="feature-icon">
-          <svg viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
-        </div>
-        <h3 class="feature-title">Deception Fabric</h3>
-        <p class="feature-desc">Distributed honeypot infrastructure and decoy credential ecosystems that ensnare, track, and attribute threat actors with forensic precision.</p>
-        <span class="feature-tag">ACTIVE</span>
-      </article>
+<div class="hero-right" aria-hidden="true">
 
-    </div>
-  </section>
+<div class="threat-orb-wrap">
+<canvas id="three-canvas"></canvas>
+</div>
 
-  <section class="dashboard-section" id="dashboard" aria-label="Intelligence dashboard">
-    <div class="section-header">
-      <div class="section-eyebrow">Global threat intelligence</div>
-      <h2 class="section-title">Threat surface<br><span>at a glance</span></h2>
-    </div>
+<div class="glass-card">
 
-    <div class="dashboard-grid">
-      <div class="map-panel">
-        <div class="panel-header">
-          <span class="panel-title">// Global attack telemetry</span>
-          <span class="panel-badge" id="map-count">LOADING…</span>
-        </div>
-        <div class="panel-body">
-          <div class="world-map-wrap">
-            <canvas id="worldCanvas" aria-label="World threat map"></canvas>
-          </div>
-          <div class="map-overlay-info">
-            <strong id="active-attacks">—</strong>
-            ACTIVE VECTORS
-          </div>
-        </div>
-      </div>
+<div class="glass-card-title">
+// Live telemetry feed
+</div>
 
-      <div class="stats-col">
+<div class="terminal-card" id="terminal"></div>
 
-        <div class="big-stat">
-          <div class="big-stat-val" id="big-blocked">—</div>
-          <div class="big-stat-label">Attacks blocked this session</div>
-          <div class="big-stat-sub" id="big-rate">▲ calculating…</div>
-        </div>
+</div>
 
-        <div class="stat-block">
-          <div class="panel-header" style="padding:0 0 14px;margin-bottom:14px">
-            <span class="panel-title">// Vector breakdown</span>
-          </div>
+<div class="glass-card">
 
-          <div style="display:grid;gap:12px">
-            <div>
-              <div class="stat-row">
-                <span class="stat-name">DDoS / volumetric</span>
-                <span class="stat-value" id="sv1">42%</span>
-              </div>
-              <div class="stat-bar-track"><div class="stat-bar-fill" id="sb1" style="width:42%"></div></div>
-            </div>
-            <div>
-              <div class="stat-row">
-                <span class="stat-name">Credential attacks</span>
-                <span class="stat-value" id="sv2">28%</span>
-              </div>
-              <div class="stat-bar-track"><div class="stat-bar-fill amber" id="sb2" style="width:28%"></div></div>
-            </div>
-            <div>
-              <div class="stat-row">
-                <span class="stat-name">Exploit / zero-day</span>
-                <span class="stat-value" id="sv3">18%</span>
-              </div>
-              <div class="stat-bar-track"><div class="stat-bar-fill red" id="sb3" style="width:18%"></div></div>
-            </div>
-            <div>
-              <div class="stat-row">
-                <span class="stat-name">Phishing / social</span>
-                <span class="stat-value" id="sv4">12%</span>
-              </div>
-              <div class="stat-bar-track"><div class="stat-bar-fill" id="sb4" style="width:12%"></div></div>
-            </div>
-          </div>
+<div class="glass-card-title">
+// Threat matrix — live
+</div>
 
-          <div class="mini-graph" id="miniGraph" style="margin-top:20px" aria-hidden="true"></div>
-        </div>
+<div class="alert-list" id="alertList"></div>
 
-      </div>
-    </div>
-  </section>
+</div>
 
-  <section class="protocols" id="protocols" aria-label="Security protocols">
-    <div class="protocols-inner">
+</div>
 
-      <div class="proto-visual" aria-hidden="true">
-        <div class="proto-grid">
-          <div class="proto-tile">
-            <div class="proto-tile-key">// ENTROPY</div>
-            <div class="proto-tile-val" id="p-entropy">98.4%</div>
-            <div class="proto-tile-sub">field depth</div>
-          </div>
-          <div class="proto-tile">
-            <div class="proto-tile-key">// LATENCY</div>
-            <div class="proto-tile-val" id="p-latency">18ms</div>
-            <div class="proto-tile-sub">response</div>
-          </div>
-          <div class="proto-tile large">
-            <div class="proto-tile-key">// MESH COVERAGE</div>
-            <div class="proto-tile-val">ULTRA</div>
-            <div class="proto-tile-sub">zero-trust perimeter — all nodes</div>
-          </div>
-          <div class="proto-tile">
-            <div class="proto-tile-key">// CIPHER</div>
-            <div class="proto-tile-val">AES</div>
-            <div class="proto-tile-sub">256-bit GCM</div>
-          </div>
-          <div class="proto-tile">
-            <div class="proto-tile-key">// LOSS</div>
-            <div class="proto-tile-val" id="p-loss">0.02%</div>
-            <div class="proto-tile-sub">packet integrity</div>
-          </div>
-        </div>
-      </div>
+</section>
 
-      <div class="proto-content">
-        <div class="section-eyebrow">Security stack</div>
-        <h2 class="section-title" style="font-size:clamp(2.8rem,5vw,5.5rem)">
-          Hardened<br>
-          <span>at every</span><br>
-          layer
-        </h2>
+<section class="cta-section" id="access">
 
-        <nav class="proto-list" aria-label="Security protocols">
-          <div class="proto-item">
-            <div class="proto-item-icon">
-              <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-            </div>
-            <div class="proto-item-body">
-              <div class="proto-item-title">CRYSTALS-Kyber KEM</div>
-              <div class="proto-item-desc">NIST-selected post-quantum key encapsulation. Resistant to Shor's algorithm and quantum oracle attacks.</div>
-            </div>
-            <div class="proto-status active">Active</div>
-          </div>
+<div class="cta-kicker">
+Clearance required
+</div>
 
-          <div class="proto-item">
-            <div class="proto-item-icon">
-              <svg viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
-            </div>
-            <div class="proto-item-body">
-              <div class="proto-item-title">Adaptive Deception Layer</div>
-              <div class="proto-item-desc">Real-time honeypot deployment and attacker attribution with forensic-grade telemetry capture.</div>
-            </div>
-            <div class="proto-status active">Active</div>
-          </div>
+<h2 class="cta-title">
+<span class="outline">Request</span><br>
+Access
+</h2>
 
-          <div class="proto-item">
-            <div class="proto-item-icon">
-              <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-            </div>
-            <div class="proto-item-body">
-              <div class="proto-item-title">Air-Gap AI Inference</div>
-              <div class="proto-item-desc">Sovereign threat prediction with no external dependencies. Operates isolated from public networks.</div>
-            </div>
-            <div class="proto-status standby">Standby</div>
-          </div>
+<p class="cta-sub">
+SERAPH is deployed exclusively to verified defence contractors,
+national security agencies, and critical infrastructure operators.
+</p>
 
-          <div class="proto-item">
-            <div class="proto-item-icon">
-              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
-            </div>
-            <div class="proto-item-body">
-              <div class="proto-item-title">Temporal Key Rotation</div>
-              <div class="proto-item-desc">Ephemeral session keys rotated every 90 seconds. Perfect forward secrecy across all relay channels.</div>
-            </div>
-            <div class="proto-status active">Active</div>
-          </div>
-        </nav>
-      </div>
+<form class="cta-form" id="accessForm">
 
-    </div>
-  </section>
+<input
+type="email"
+class="cta-input"
+placeholder="// secure.contact@agency.mil"
+autocomplete="email"
+inputmode="email"
+maxlength="254"
+required
+>
 
-  <section class="cta-section" id="access" aria-label="Request access">
-    <div class="cta-kicker">Clearance required</div>
-    <h2 class="cta-title">
-      <span class="outline">Request</span><br>Access
-    </h2>
-    <p class="cta-sub">SERAPH is deployed exclusively to verified defence contractors, national security agencies, and critical infrastructure operators.</p>
+<button type="submit" class="btn-primary">
+Request clearance
+</button>
 
-    <div class="cta-form" role="form" aria-label="Access request form">
-      <input type="email" class="cta-input" placeholder="// secure.contact@agency.mil" aria-label="Email address" maxlength="50" pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$" required/>
-      <button type="button" class="btn-primary" style="white-space:nowrap">Request clearance</button>
-    </div>
-    <div class="cta-note">All requests are vetted against national security criteria. Civilian access is not available.</div>
-  </section>
+</form>
 
-  <footer>
-    <div class="footer-logo">SERAPH</div>
-    <ul class="footer-links" role="list">
-      <li><a href="#">Documentation</a></li>
-      <li><a href="#">Compliance</a></li>
-      <li><a href="#">Security advisories</a></li>
-      <li><a href="#">Contact</a></li>
-    </ul>
-    <div class="footer-copy">© 2026 SERAPH Systems // Classified</div>
-  </footer>
+</section>
 
-</div><script>
-// ─── VISIBILITY API (Memory Leak Prevention) ──────────────
+<footer>
+
+<div class="footer-logo">
+SERAPH
+</div>
+
+<ul class="footer-links">
+<li><a href="#">Documentation</a></li>
+<li><a href="#">Compliance</a></li>
+<li><a href="#">Security advisories</a></li>
+<li><a href="#">Contact</a></li>
+</ul>
+
+<div class="footer-copy">
+© 2026 SERAPH Systems // Classified
+</div>
+
+</footer>
+
+</div>
+
+<script>
+'use strict';
+
+/* ─────────────────────────────────────────────
+   TAB VISIBILITY CONTROL
+───────────────────────────────────────────── */
+
 let isTabActive = true;
-document.addEventListener("visibilitychange", () => {
+
+document.addEventListener('visibilitychange', () => {
   isTabActive = !document.hidden;
 });
 
-// ─── CURSOR ───────────────────────────────────────────────
+/* ─────────────────────────────────────────────
+   CUSTOM CURSOR
+───────────────────────────────────────────── */
+
 const cursor = document.getElementById('cursor');
 const cursorDot = document.getElementById('cursor-dot');
-let mx=0,my=0,cx=0,cy=0;
-document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY});
-(function animCursor(){
-  if (isTabActive) {
-    cx+=(mx-cx)*.18; cy+=(my-cy)*.18;
-    cursor.style.left=mx+'px'; cursor.style.top=my+'px';
-    cursorDot.style.left=mx+'px'; cursorDot.style.top=my+'px';
-  }
-  requestAnimationFrame(animCursor);
-})();
 
-// ─── CLOCK ────────────────────────────────────────────────
-const navClock=document.getElementById('nav-clock');
-function tickClock(){
-  if (!isTabActive) return;
-  const d=new Date();
-  const p=n=>String(n).padStart(2,'0');
-  navClock.textContent=`UTC // ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}:${p(d.getUTCSeconds())} // ONLINE`;
+if (window.matchMedia('(pointer:fine)').matches){
+
+  let mx = 0;
+  let my = 0;
+
+  document.addEventListener('mousemove', (e) => {
+    mx = e.clientX;
+    my = e.clientY;
+  }, { passive:true });
+
+  function animateCursor(){
+
+    if(isTabActive){
+      cursor.style.left = mx + 'px';
+      cursor.style.top = my + 'px';
+
+      cursorDot.style.left = mx + 'px';
+      cursorDot.style.top = my + 'px';
+    }
+
+    requestAnimationFrame(animateCursor);
+  }
+
+  animateCursor();
 }
-tickClock(); setInterval(tickClock,1000);
 
-// ─── ANIMATED COUNTER ─────────────────────────────────────
+/* ─────────────────────────────────────────────
+   CLOCK
+───────────────────────────────────────────── */
+
+const navClock = document.getElementById('nav-clock');
+
+function tickClock(){
+
+  if(!isTabActive) return;
+
+  const d = new Date();
+
+  const p = n => String(n).padStart(2,'0');
+
+  navClock.textContent =
+    `UTC // ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}:${p(d.getUTCSeconds())} // ONLINE`;
+}
+
+tickClock();
+
+setInterval(tickClock, 1000);
+
+/* ─────────────────────────────────────────────
+   METRIC COUNTERS
+───────────────────────────────────────────── */
+
 function animCount(el,target,suffix,duration){
-  let start=0,startTime=null;
+
+  let startTime = null;
+
   function step(ts){
-    if(!startTime)startTime=ts;
-    const prog=Math.min((ts-startTime)/duration,1);
-    el.textContent=Math.floor(prog*target)+suffix;
-    if(prog<1)requestAnimationFrame(step);
+
+    if(!startTime){
+      startTime = ts;
+    }
+
+    const prog = Math.min((ts - startTime) / duration, 1);
+
+    el.textContent = Math.floor(prog * target) + suffix;
+
+    if(prog < 1){
+      requestAnimationFrame(step);
+    }
   }
+
   requestAnimationFrame(step);
 }
-animCount(document.getElementById('m-threats'),148923,'',2200);
-animCount(document.getElementById('m-ms'),17,'ms',1800);
 
-// ─── HEX BACKGROUND ───────────────────────────────────────
-const hexCanvas=document.getElementById('hex-canvas');
-const hctx=hexCanvas.getContext('2d');
-function drawHex(){
-  hexCanvas.width=window.innerWidth;
-  hexCanvas.height=window.innerHeight;
-  const s=42,w=window.innerWidth,h=window.innerHeight;
-  const cols=Math.ceil(w/(s*1.73))+2;
-  const rows=Math.ceil(h/(s*1.5))+2;
-  hctx.strokeStyle='#00ff88';
-  hctx.lineWidth=.6;
-  for(let r=0;r<rows;r++){
-    for(let c=0;c<cols;c++){
-      const x=c*s*1.73+(r%2)*s*0.865;
-      const y=r*s*1.5;
-      hctx.beginPath();
-      for(let i=0;i<6;i++){
-        const a=Math.PI/180*(60*i-30);
-        i===0?hctx.moveTo(x+s*Math.cos(a),y+s*Math.sin(a)):hctx.lineTo(x+s*Math.cos(a),y+s*Math.sin(a));
-      }
-      hctx.closePath();hctx.stroke();
+animCount(
+  document.getElementById('m-threats'),
+  148923,
+  '',
+  2200
+);
+
+animCount(
+  document.getElementById('m-ms'),
+  17,
+  'ms',
+  1800
+);
+
+/* ─────────────────────────────────────────────
+   TERMINAL FEED
+───────────────────────────────────────────── */
+
+const termEl = document.getElementById('terminal');
+
+const lines = [
+  { c:'term-line', t:'[SYS] Relay chain established…' },
+  { c:'term-line active', t:'[AUTH] Zero-trust verification ✓' },
+  { c:'term-line warn', t:'[SCAN] Anomaly detected: AS48280' },
+  { c:'term-line active', t:'[RESP] Quarantine deployed 14ms' },
+  { c:'term-line err', t:'[WARN] Exfil attempt suppressed' },
+];
+
+let termIndex = 0;
+
+function pushTermLine(){
+
+  if(!isTabActive) return;
+
+  const row = document.createElement('div');
+  row.className = lines[termIndex].c;
+  row.textContent = lines[termIndex].t;
+
+  const cur = document.createElement('span');
+  cur.className = 'term-cursor';
+
+  row.appendChild(cur);
+
+  termEl.appendChild(row);
+
+  while(termEl.children.length > 5){
+    termEl.removeChild(termEl.firstChild);
+  }
+
+  termIndex = (termIndex + 1) % lines.length;
+}
+
+pushTermLine();
+
+setInterval(pushTermLine, 1400);
+
+/* ─────────────────────────────────────────────
+   ALERT FEED
+───────────────────────────────────────────── */
+
+const alertList = document.getElementById('alertList');
+
+const alerts = [
+  { cls:'ok', txt:'Zero-trust verification passed', src:'AUTH' },
+  { cls:'warn', txt:'Suspicious beacon detected', src:'SIGINT' },
+  { cls:'crit', txt:'Credential spray blocked', src:'NET' },
+  { cls:'ok', txt:'Entropy field stabilised', src:'CORE' },
+];
+
+function pushAlert(){
+
+  if(!isTabActive) return;
+
+  const a = alerts[Math.floor(Math.random() * alerts.length)];
+
+  const t = new Date();
+
+  const p = n => String(n).padStart(2,'0');
+
+  const time =
+    `${p(t.getUTCHours())}:${p(t.getUTCMinutes())}:${p(t.getUTCSeconds())}`;
+
+  const el = document.createElement('div');
+  el.className = `alert-item ${a.cls}`;
+
+  const dot = document.createElement('div');
+  dot.className = 'alert-dot';
+
+  const text = document.createElement('span');
+  text.className = 'alert-text';
+  text.textContent = `[${a.src}] ${a.txt}`;
+
+  const stamp = document.createElement('span');
+  stamp.className = 'alert-time';
+  stamp.textContent = time;
+
+  el.append(dot, text, stamp);
+
+  alertList.appendChild(el);
+
+  while(alertList.children.length > 3){
+    alertList.removeChild(alertList.firstChild);
+  }
+}
+
+pushAlert();
+
+setInterval(pushAlert, 2200);
+
+/* ─────────────────────────────────────────────
+   FORM HANDLER
+───────────────────────────────────────────── */
+
+document
+  .getElementById('accessForm')
+  ?.addEventListener('submit', (e) => {
+
+    e.preventDefault();
+
+    const email =
+      e.currentTarget
+      .querySelector('input[type="email"]')
+      ?.value
+      .trim();
+
+    if(!email){
+      return;
     }
-  }
-}
-drawHex();
-window.addEventListener('resize',drawHex);
 
-// ─── MATRIX RAIN ──────────────────────────────────────────
-const matCanvas=document.getElementById('matrix-canvas');
-const mctx=matCanvas.getContext('2d');
-const chars='01アイウエオカキクケコサシスセソタチツテトナニヌネノABCDEF';
-let drops=[];
-function initMatrix(){
-  matCanvas.width=window.innerWidth;
-  matCanvas.height=window.innerHeight;
-  const cols=Math.floor(window.innerWidth/16);
-  drops=Array.from({length:cols},()=>Math.random()*-50);
-}
-initMatrix();
-window.addEventListener('resize',initMatrix);
-function drawMatrix(){
-  mctx.fillStyle='rgba(0,0,0,.04)';
-  mctx.fillRect(0,0,matCanvas.width,matCanvas.height);
-  mctx.fillStyle='#00ff88';
-  mctx.font='13px JetBrains Mono,monospace';
-  drops.forEach((y,i)=>{
-    const c=chars[Math.floor(Math.random()*chars.length)];
-    mctx.fillText(c,i*16,y*16);
-    if(y*16>matCanvas.height&&Math.random()>.97)drops[i]=0;
-    drops[i]+=.5;
+    alert('Clearance request submitted.');
   });
-}
-setInterval(() => { if (isTabActive) drawMatrix(); }, 60);
 
-// ─── RADAR ────────────────────────────────────────────────
-const radCanvas=document.getElementById('radar-canvas');
-const rctx=radCanvas.getContext('2d');
-let radAngle=0;
-const radBlips=[];
-function initRadar(){
-  radCanvas.width=window.innerWidth;
-  radCanvas.height=window.innerHeight;
-}
-initRadar();
-window.addEventListener('resize',initRadar);
-const RC={x:()=>radCanvas.width-140,y:()=>radCanvas.height-140,r:110};
-for(let i=0;i<12;i++){
-  const a=Math.random()*Math.PI*2;
-  const r=Math.random()*RC.r*.9;
-  radBlips.push({a,r,life:0,maxLife:Math.random()*180+60});
-}
-function drawRadar(){
-  if (isTabActive) {
-    rctx.clearRect(0,0,radCanvas.width,radCanvas.height);
-    const cx=RC.x(),cy=RC.y(),cr=RC.r;
-    rctx.strokeStyle='rgba(0,255,136,.14)';
-    rctx.lineWidth=1;
-    [.33,.66,1].forEach(f=>{
-      rctx.beginPath();rctx.arc(cx,cy,cr*f,0,Math.PI*2);rctx.stroke();
-    });
-    rctx.beginPath();rctx.moveTo(cx-cr,cy);rctx.lineTo(cx+cr,cy);rctx.stroke();
-    rctx.beginPath();rctx.moveTo(cx,cy-cr);rctx.lineTo(cx,cy+cr);rctx.stroke();
-    const grad=rctx.createConicalGradient?rctx.createConicalGradient(cx,cy,radAngle):null;
-    rctx.save();
-    rctx.beginPath();rctx.arc(cx,cy,cr,radAngle-1.2,radAngle);
-    rctx.lineTo(cx,cy);rctx.closePath();
-    rctx.fillStyle='rgba(0,255,136,.18)';
-    rctx.fill();
-    rctx.beginPath();
-    rctx.moveTo(cx,cy);
-    rctx.lineTo(cx+Math.cos(radAngle)*cr,cy+Math.sin(radAngle)*cr);
-    rctx.strokeStyle='rgba(0,255,136,.7)';rctx.lineWidth=1.5;
-    rctx.stroke();
-    rctx.restore();
-    radBlips.forEach(b=>{
-      b.life++;
-      if(b.life>b.maxLife){b.life=0;b.a=Math.random()*Math.PI*2;b.r=Math.random()*cr*.9;}
-      const diff=((radAngle-b.a)%(Math.PI*2)+Math.PI*2)%(Math.PI*2);
-      if(diff<1.3){
-        const alpha=Math.max(0,1-diff/1.3)*0.85;
-        const bx=cx+Math.cos(b.a)*b.r;
-        const by=cy+Math.sin(b.a)*b.r;
-        rctx.beginPath();rctx.arc(bx,by,2.5,0,Math.PI*2);
-        rctx.fillStyle=`rgba(0,255,136,${alpha})`;rctx.fill();
-      }
-    });
-    radAngle+=0.018;
-  }
-  requestAnimationFrame(drawRadar);
-}
-drawRadar();
+/* ─────────────────────────────────────────────
+   THREE.JS ORB
+───────────────────────────────────────────── */
 
-// ─── THREE.JS ORB ─────────────────────────────────────────
 (function(){
-  const c=document.getElementById('three-canvas');
-  if(!c||!window.THREE)return;
-  const scene=new THREE.Scene();
-  const camera=new THREE.PerspectiveCamera(40,1,.1,100);
+
+  const c = document.getElementById('three-canvas');
+
+  if(!window.THREE || !c){
+    return;
+  }
+
+  const scene = new THREE.Scene();
+
+  const camera =
+    new THREE.PerspectiveCamera(40,1,.1,100);
+
   camera.position.set(0,0,6);
-  const renderer=new THREE.WebGLRenderer({canvas:c,alpha:true,antialias:true});
-  renderer.setPixelRatio(Math.min(devicePixelRatio,2));
-  renderer.setClearColor(0,0);
+
+  const renderer =
+    new THREE.WebGLRenderer({
+      canvas:c,
+      alpha:true,
+      antialias:true
+    });
+
+  renderer.setPixelRatio(
+    Math.min(window.devicePixelRatio,2)
+  );
+
+  renderer.setClearColor(0x000000,0);
+
   renderer.setSize(340,340);
 
-  scene.add(new THREE.AmbientLight(0x99ffdd,1.2));
-  const dl=new THREE.DirectionalLight(0x00ff88,2.2);dl.position.set(3,4,5);scene.add(dl);
-  const pl=new THREE.PointLight(0x17f3e8,1.8,30);pl.position.set(-4,-2,4);scene.add(pl);
-  const pl2=new THREE.PointLight(0xff2d5b,.8,20);pl2.position.set(0,3,3);scene.add(pl2);
+  scene.add(
+    new THREE.AmbientLight(0x99ffdd,1.2)
+  );
 
-  const g=new THREE.Group();scene.add(g);
+  const light =
+    new THREE.DirectionalLight(0x00ff88,2.2);
 
-  const icoGeo=new THREE.IcosahedronGeometry(1.3,2);
-  g.add(new THREE.Mesh(icoGeo,new THREE.MeshStandardMaterial({
-    color:0x03150a,emissive:0x00ff88,emissiveIntensity:.7,
-    metalness:.3,roughness:.2,transparent:true,opacity:.22
-  })));
-  g.add(new THREE.Mesh(icoGeo,new THREE.MeshBasicMaterial({
-    color:0x00ff88,wireframe:true,transparent:true,opacity:.18
-  })));
+  light.position.set(3,4,5);
 
-  [[2.1,.04,0x00ff88,.4,0,Math.PI/2,0],[2.5,.025,0x17f3e8,.2,Math.PI/2,0,0],
-   [1.6,.02,0xff2d5b,.15,Math.PI/3,0,Math.PI/6]].forEach(([r,t,col,op,rx,ry,rz])=>{
-    const m=new THREE.Mesh(new THREE.TorusGeometry(r,t,12,256),
-      new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:op}));
-    m.rotation.set(rx,ry,rz);g.add(m);
-  });
+  scene.add(light);
 
-  const knot=new THREE.Mesh(new THREE.TorusKnotGeometry(1.3,.065,220,24),
-    new THREE.MeshBasicMaterial({color:0x00cc6e,transparent:true,opacity:.22}));
-  g.add(knot);
+  const group = new THREE.Group();
 
-  const pPos=new Float32Array(320*3);
-  for(let i=0;i<320;i++){
-    const r=3.2+Math.random()*3;
-    const th=Math.random()*Math.PI*2,ph=Math.acos(2*Math.random()-1);
-    pPos[i*3]=r*Math.sin(ph)*Math.cos(th);
-    pPos[i*3+1]=r*Math.sin(ph)*Math.sin(th);
-    pPos[i*3+2]=r*Math.cos(ph);
-  }
-  const pGeo=new THREE.BufferGeometry();
-  pGeo.setAttribute('position',new THREE.BufferAttribute(pPos,3));
-  g.add(new THREE.Points(pGeo,new THREE.PointsMaterial({color:0x00ff88,size:.022,transparent:true,opacity:.72,depthWrite:false})));
+  scene.add(group);
 
-  const [r1,r2,r3]=g.children.filter(o=>o.type==='Mesh'&&o.geometry.type==='TorusGeometry');
+  const geo =
+    new THREE.IcosahedronGeometry(1.3,2);
 
-  function anim(){
-    if (isTabActive) {
-      g.rotation.y+=.003;g.rotation.x+=.001;
-      if(r1)r1.rotation.z+=.006;
-      if(r2)r2.rotation.x-=.004;
-      if(r3)r3.rotation.y+=.008;
-      knot.rotation.x+=.004;knot.rotation.y-=.003;
+  const mesh =
+    new THREE.Mesh(
+      geo,
+      new THREE.MeshStandardMaterial({
+        color:0x03150a,
+        emissive:0x00ff88,
+        emissiveIntensity:.7,
+        metalness:.3,
+        roughness:.2,
+        transparent:true,
+        opacity:.22
+      })
+    );
+
+  group.add(mesh);
+
+  const wire =
+    new THREE.Mesh(
+      geo,
+      new THREE.MeshBasicMaterial({
+        color:0x00ff88,
+        wireframe:true,
+        transparent:true,
+        opacity:.18
+      })
+    );
+
+  group.add(wire);
+
+  function animate(){
+
+    if(isTabActive){
+
+      group.rotation.y += .003;
+      group.rotation.x += .001;
+
       renderer.render(scene,camera);
     }
-    requestAnimationFrame(anim);
+
+    requestAnimationFrame(animate);
   }
-  anim();
+
+  animate();
+
 })();
 
-// ─── TERMINAL ─────────────────────────────────────────────
-const termEl=document.getElementById('terminal');
-const lines=[
-  {c:'term-line','t':'[SYS]  Relay chain established…'},
-  {c:'term-line active','t':'[AUTH] Zero-trust verification  ✓'},
-  {c:'term-line','t':'[AI]   Neural lattice synchronised'},
-  {c:'term-line warn','t':'[SCAN] Anomaly detected: AS48280'},
-  {c:'term-line active','t':'[RESP] Quarantine deployed 14ms'},
-  {c:'term-line','t':'[CRYP] Key rotation complete'},
-  {c:'term-line err','t':'[WARN] Exfil attempt: suppressed'},
-  {c:'term-line active','t':'[SERAPH] Autonomous  // online'},
-];
-let ti=0;
-function pushTermLine(){
-  if(!termEl)return;
-  const d=document.createElement('div');
-  d.className=lines[ti].c;
-  d.textContent=lines[ti].t;
-  const cur=document.createElement('span');cur.className='term-cursor';
-  d.appendChild(cur);
-  termEl.appendChild(d);
-  while(termEl.children.length>5)termEl.removeChild(termEl.firstChild);
-  termEl.scrollTop=termEl.scrollHeight;
-  ti=(ti+1)%lines.length;
-}
-pushTermLine(); setInterval(() => { if (isTabActive) pushTermLine(); }, 1200);
-
-// ─── LIVE ALERTS ──────────────────────────────────────────
-const alertDefs=[
-  {cls:'ok',txt:'Zero-trust verification passed',src:'AUTH'},
-  {cls:'ok',txt:'AES-256 relay sealed',src:'CRYP'},
-  {cls:'warn',txt:'Suspicious beacon: 185.220.x.x',src:'SIGINT'},
-  {cls:'crit',txt:'SQLi attempt blocked — node 7',src:'WAF'},
-  {cls:'ok',txt:'Entropy field stabilised',src:'CORE'},
-  {cls:'warn',txt:'Lateral move attempted',src:'EDR'},
-  {cls:'crit',txt:'Credential spray — 8k req/s',src:'NET'},
-  {cls:'ok',txt:'Deception trap triggered',src:'HONEYP'},
-];
-const alertList=document.getElementById('alertList');
-function pushAlert(){
-  if(!alertList)return;
-  const a=alertDefs[Math.floor(Math.random()*alertDefs.length)];
-  const t=new Date();
-  const p=n=>String(n).padStart(2,'0');
-  const time=`${p(t.getUTCHours())}:${p(t.getUTCMinutes())}:${p(t.getUTCSeconds())}`;
-  const el=document.createElement('div');
-  el.className=`alert-item ${a.cls}`;
-  el.innerHTML=`<div class="alert-dot"></div><span class="alert-text">[${a.src}] ${a.txt}</span><span class="alert-time">${time}</span>`;
-  el.style.opacity='0';el.style.transform='translateX(12px)';el.style.transition='opacity .3s,transform .3s';
-  alertList.appendChild(el);
-  requestAnimationFrame(()=>{el.style.opacity='1';el.style.transform='none'});
-  while(alertList.children.length>3)alertList.removeChild(alertList.firstChild);
-}
-pushAlert(); setInterval(() => { if (isTabActive) pushAlert(); }, 2200);
-
-// ─── DASHBOARD METRICS ────────────────────────────────────
-let blocked=0,rate=0;
-const bigBlocked=document.getElementById('big-blocked');
-const bigRate=document.getElementById('big-rate');
-const mapCount=document.getElementById('map-count');
-const activeAttacks=document.getElementById('active-attacks');
-
-function updateDash(){
-  blocked+=Math.floor(Math.random()*18+4);
-  rate=Math.floor(Math.random()*90+40);
-  if(bigBlocked)bigBlocked.textContent=blocked.toLocaleString();
-  if(bigRate)bigRate.textContent=`▲ +${rate}/min ingested`;
-  const active=Math.floor(Math.random()*280+120);
-  if(mapCount)mapCount.textContent=`${active} ACTIVE VECTORS`;
-  if(activeAttacks)activeAttacks.textContent=active;
-}
-updateDash(); setInterval(() => { if (isTabActive) updateDash(); }, 3000);
-
-// ─── STAT BARS ANIMATION ──────────────────────────────────
-function jitterBars(){
-  const vals=[
-    [42,28,18,12],
-  ].map(()=>[
-    Math.floor(Math.random()*15+36),
-    Math.floor(Math.random()*10+24),
-    Math.floor(Math.random()*8+14),
-    Math.floor(Math.random()*6+9),
-  ])[0];
-  const total=vals.reduce((a,b)=>a+b,0);
-  vals.forEach((v,i)=>{
-    const pct=Math.round(v/total*100);
-    const sv=document.getElementById(`sv${i+1}`);
-    const sb=document.getElementById(`sb${i+1}`);
-    if(sv)sv.textContent=pct+'%';
-    if(sb)sb.style.width=pct+'%';
-  });
-}
-setInterval(() => { if (isTabActive) jitterBars(); }, 4000);
-
-// ─── MINI GRAPH ───────────────────────────────────────────
-const miniGraph=document.getElementById('miniGraph');
-if(miniGraph){
-  const heights=Array.from({length:18},()=>Math.random()*100);
-  heights.forEach(h=>{
-    const b=document.createElement('div');
-    b.className='bar';
-    b.style.height=h+'%';
-    miniGraph.appendChild(b);
-  });
-  setInterval(()=>{
-    if (isTabActive) {
-      Array.from(miniGraph.children).forEach((b)=>{
-        b.style.height=(Math.random()*90+10)+'%';
-        b.style.transition='height .5s ease';
-      });
-    }
-  },1800);
-}
-
-// ─── PROTOCOL TILES ANIMATION ─────────────────────────────
-const pEntropy=document.getElementById('p-entropy');
-const pLatency=document.getElementById('p-latency');
-const pLoss=document.getElementById('p-loss');
-let ent=98.4,lat=18,loss=.02;
-setInterval(()=>{
-  if (!isTabActive) return;
-  ent=Math.max(96,Math.min(99.99,ent+(Math.random()-.45)));
-  lat=Math.max(8,Math.min(34,lat+(Math.random()-.5)*3));
-  loss=Math.max(.01,Math.min(.12,loss+(Math.random()-.5)*.01));
-  if(pEntropy)pEntropy.textContent=ent.toFixed(1)+'%';
-  if(pLatency)pLatency.textContent=Math.round(lat)+'ms';
-  if(pLoss)pLoss.textContent=loss.toFixed(2)+'%';
-},2000);
-
-// ─── WORLD MAP (threat dots) ──────────────────────────────
-const worldCanvas=document.getElementById('worldCanvas');
-if(worldCanvas){
-  const wctx=worldCanvas.getContext('2d');
-  const attacks=[];
-  function latLonToXY(lat,lon,w,h){
-    return{x:(lon+180)/360*w,y:(90-lat)/180*h};
-  }
-  const cities=[
-    [51.5,-.09],[40.7,-74],[35.7,139.7],[37.8,-122.4],
-    [-33.9,151.2],[48.8,2.3],[55.7,37.6],[31.2,121.5],
-    [19.4,-99.1],[28.6,77.2],[-23.5,-46.6],[1.3,103.8],
-    [52.5,13.4],[41.9,12.5],[59.9,30.3],[50.1,8.7],
-  ];
-  function spawnAttack(){
-    const src=cities[Math.floor(Math.random()*cities.length)];
-    const dst=cities[Math.floor(Math.random()*cities.length)];
-    attacks.push({
-      slat:src[0],slon:src[1],
-      dlat:dst[0],dlon:dst[1],
-      prog:0,speed:.015+(Math.random()*.01),
-      col:Math.random()>.7?'#ff2d5b':Math.random()>.5?'#ffaa00':'#00ff88',
-    });
-  }
-  for(let i=0;i<6;i++)spawnAttack();
-  setInterval(() => { if (isTabActive) spawnAttack(); }, 1200);
-
-  function drawWorld(){
-    if (isTabActive) {
-      const W=worldCanvas.clientWidth,H=worldCanvas.clientHeight;
-      if(worldCanvas.width!==W||worldCanvas.height!==H){
-        worldCanvas.width=W;worldCanvas.height=H;
-      }
-      wctx.clearRect(0,0,W,H);
-
-      wctx.strokeStyle='rgba(0,255,136,.06)';wctx.lineWidth=1;
-      for(let x=0;x<W;x+=W/12){wctx.beginPath();wctx.moveTo(x,0);wctx.lineTo(x,H);wctx.stroke()}
-      for(let y=0;y<H;y+=H/6){wctx.beginPath();wctx.moveTo(0,y);wctx.lineTo(W,y);wctx.stroke()}
-
-      cities.forEach(([lat,lon])=>{
-        const{x,y}=latLonToXY(lat,lon,W,H);
-        wctx.beginPath();wctx.arc(x,y,2.5,0,Math.PI*2);
-        wctx.fillStyle='rgba(0,255,136,.5)';wctx.fill();
-        wctx.beginPath();wctx.arc(x,y,5,0,Math.PI*2);
-        wctx.strokeStyle='rgba(0,255,136,.15)';wctx.lineWidth=1;wctx.stroke();
-      });
-
-      attacks.forEach((a,idx)=>{
-        a.prog+=a.speed;
-        const{x:sx,y:sy}=latLonToXY(a.slat,a.slon,W,H);
-        const{x:dx,y:dy}=latLonToXY(a.dlat,a.dlon,W,H);
-        const mx=(sx+dx)/2,my=(sy+dy)/2-Math.hypot(dx-sx,dy-sy)*.38;
-
-        const t=Math.min(a.prog,1);
-        const pt=(u)=>({
-          x:(1-u)**2*sx+2*(1-u)*u*mx+u**2*dx,
-          y:(1-u)**2*sy+2*(1-u)*u*my+u**2*dy,
-        });
-
-        wctx.beginPath();
-        for(let u=0;u<=t;u+=.02){
-          const p=pt(u);
-          u===0?wctx.moveTo(p.x,p.y):wctx.lineTo(p.x,p.y);
-        }
-        wctx.strokeStyle=a.col.replace(')',','+(.6*(1-t*.3))+')').replace('rgb','rgba').replace('#','');
-
-        const hex=a.col.slice(1);
-        const r=parseInt(hex.slice(0,2),16),g2=parseInt(hex.slice(2,4),16),b=parseInt(hex.slice(4,6),16);
-        wctx.strokeStyle=`rgba(${r},${g2},${b},${.7*(1-t*.3)})`;
-        wctx.lineWidth=1.2;wctx.stroke();
-
-        const head=pt(t);
-        wctx.beginPath();wctx.arc(head.x,head.y,2,0,Math.PI*2);
-        wctx.fillStyle=a.col;wctx.fill();
-
-        if(a.prog>=1){attacks.splice(idx,1)}
-      });
-    }
-    requestAnimationFrame(drawWorld);
-  }
-  drawWorld();
-}
-
-// ─── SCROLL REVEAL ────────────────────────────────────────
-const reveals=document.querySelectorAll('.feature-card,.stat-block,.big-stat,.proto-item,.proto-tile');
-const observer=new IntersectionObserver(entries=>{
-  entries.forEach(e=>{
-    if(e.isIntersecting){
-      e.target.style.opacity='1';
-      e.target.style.transform='translateY(0)';
-    }
-  });
-},{threshold:.12});
-reveals.forEach(el=>{
-  el.style.opacity='0';
-  el.style.transform='translateY(22px)';
-  el.style.transition='opacity .6s ease,transform .6s ease';
-  observer.observe(el);
-});
 </script>
+
 </body>
 </html>
